@@ -1,10 +1,9 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap");
 
 :root {
-  --color-bg: linear-gradient(135deg, #6a8dff 0%, #a084ee 50%, #f8fafc 100%);
   --color-card: #fff;
   --color-border: #e0e0e0;
-  --color-shadow: rgba(106, 141, 255, 0.10);
+  --color-shadow: rgba(106, 141, 255, 0.1);
   --color-shadow-2: rgba(160, 132, 238, 0.08);
   --color-primary: #6a8dff;
   --color-secondary: #a084ee;
@@ -34,11 +33,12 @@
   --color-assistant-bubble-text: #f8fafc;
 }
 
-body, html {
+body,
+html {
   min-height: 100vh;
   margin: 0;
   padding: 0;
-  font-family: 'Poppins', Arial, sans-serif;
+  font-family: "Poppins", Arial, sans-serif;
   background: var(--color-bg);
   color: var(--color-text);
   background-attachment: fixed;
@@ -116,7 +116,7 @@ body, html {
   border-radius: 18px;
   padding: 18px 28px;
   font-size: 1.18rem;
-  font-family: 'Lato', sans-serif;
+  font-family: "Lato", sans-serif;
   max-width: 80%;
   box-shadow: 0 2px 8px var(--color-shadow-2);
   transition: background 0.5s, color 0.5s, box-shadow 0.2s, transform 0.2s;
@@ -146,7 +146,7 @@ body, html {
   border-radius: 12px;
   border: 2px solid var(--color-border);
   font-size: 1.18rem;
-  font-family: 'Lato', sans-serif;
+  font-family: "Lato", sans-serif;
   background: var(--color-card);
   color: var(--color-text);
   transition: border 0.2s, box-shadow 0.2s, background 0.5s, color 0.5s;
@@ -163,7 +163,7 @@ body, html {
   background: var(--color-user-bubble);
   color: var(--color-user-bubble-text);
   font-size: 1.18rem;
-  font-family: 'Lato', sans-serif;
+  font-family: "Lato", sans-serif;
   font-weight: 600;
   border: none;
   border-radius: 12px;
@@ -173,7 +173,11 @@ body, html {
   box-shadow: 0 2px 8px var(--color-shadow);
 }
 .input-form button:hover {
-  background: linear-gradient(90deg, var(--color-accent) 0%, var(--color-accent2) 100%);
+  background: linear-gradient(
+    90deg,
+    var(--color-accent) 0%,
+    var(--color-accent2) 100%
+  );
   color: var(--color-text);
   transform: scale(1.04);
   box-shadow: 0 4px 16px var(--color-shadow);
@@ -332,7 +336,7 @@ body, html {
   border: none;
   border-radius: 20px;
   font-size: 1.15rem;
-  font-family: 'Lato', sans-serif;
+  font-family: "Lato", sans-serif;
   font-weight: 600;
   width: calc(100% - 128px);
   margin-left: 64px;
@@ -344,7 +348,11 @@ body, html {
   box-shadow: 0 2px 8px var(--color-shadow);
 }
 .suggestions-toggle:hover {
-  background: linear-gradient(90deg, var(--color-accent) 0%, var(--color-accent2) 100%);
+  background: linear-gradient(
+    90deg,
+    var(--color-accent) 0%,
+    var(--color-accent2) 100%
+  );
   color: var(--color-text);
   transform: scale(1.04);
   box-shadow: 0 4px 16px var(--color-shadow);
@@ -356,7 +364,7 @@ body, html {
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(0,0,0,0.25);
+  background: rgba(0, 0, 0, 0.25);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -367,7 +375,7 @@ body, html {
   background: #fff;
   border-radius: 18px;
   padding: 2.5rem 2.5rem 2rem 2.5rem;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
   max-width: 420px;
   width: 95vw;
   text-align: center;
@@ -502,22 +510,32 @@ body, html {
   color: var(--color-user-bubble);
 }
 
-.landing-page, .connect-page, .help-page, .about-page {
+.landing-page,
+.connect-page,
+.help-page,
+.about-page {
   padding: 2rem;
   text-align: center;
 }
 
-.landing-page h1, .connect-page h1, .help-page h1, .about-page h1 {
+.landing-page h1,
+.connect-page h1,
+.help-page h1,
+.about-page h1 {
   font-size: 2.5rem;
   margin-bottom: 1rem;
 }
 
-.landing-page p, .connect-page p, .help-page p, .about-page p {
+.landing-page p,
+.connect-page p,
+.help-page p,
+.about-page p {
   font-size: 1.2rem;
   margin-bottom: 1rem;
 }
 
-.landing-page button, .connect-page button {
+.landing-page button,
+.connect-page button {
   background: var(--color-user-bubble);
   color: var(--color-user-bubble-text);
   border: none;
@@ -530,7 +548,8 @@ body, html {
   box-shadow: 0 2px 8px var(--color-shadow);
 }
 
-.landing-page button:hover, .connect-page button:hover {
+.landing-page button:hover,
+.connect-page button:hover {
   background: var(--color-user-bubble-hover);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px var(--color-shadow);
@@ -810,7 +829,7 @@ body, html {
 }
 
 .demo-sql {
-  font-family: 'Fira Code', monospace;
+  font-family: "Fira Code", monospace;
   background: rgba(0, 0, 0, 0.1);
   padding: 0.5rem;
   border-radius: 6px;
@@ -1319,12 +1338,16 @@ body, html {
   font-style: italic;
 }
 
-.tips-list, .features-list, .limitations-list {
+.tips-list,
+.features-list,
+.limitations-list {
   list-style: none;
   padding: 0;
 }
 
-.tips-list li, .features-list li, .limitations-list li {
+.tips-list li,
+.features-list li,
+.limitations-list li {
   padding: 0.75rem;
   margin-bottom: 0.5rem;
   background: var(--color-card);
@@ -1353,12 +1376,14 @@ body, html {
   color: var(--color-text);
 }
 
-.learnings-list, .challenges-list {
+.learnings-list,
+.challenges-list {
   list-style: none;
   padding: 0;
 }
 
-.learnings-list li, .challenges-list li {
+.learnings-list li,
+.challenges-list li {
   padding: 1rem;
   margin-bottom: 1rem;
   background: var(--color-card);
@@ -1433,4 +1458,4 @@ body, html {
   background: linear-gradient(135deg, #23283a 0%, #2d3142 100%);
   color: #a084ee;
   border: 1.5px solid #6a8dff;
-} 
+}
