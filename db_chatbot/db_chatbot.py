@@ -115,7 +115,7 @@ class ChatMemory:
         ])
 
 class DatabaseChatbot:
-    def __init__(self):
+    def __init__(self, connection_string=None, api_key=None, api_version=None, deployment_name=None, endpoint=None):
         """Initialize the chatbot with conversation context and state management."""
         self.conn = None
         self.last_query = None
@@ -127,6 +127,14 @@ class DatabaseChatbot:
             'query_history': []
         }
         self.chat_memory = ChatMemory()
+        
+        # Store configuration
+        self.connection_string = connection_string or AZURE_SQL_CONNECTION_STRING
+        self.api_key = api_key or AZURE_OPENAI_API_KEY
+        self.api_version = api_version or AZURE_OPENAI_VERSION
+        self.deployment_name = deployment_name or AZURE_OPENAI_DEPLOYMENT
+        self.endpoint = endpoint or AZURE_OPENAI_ENDPOINT
+        
         self.initialize_database()
         print("Database Chatbot initialized successfully!")
         self.print_help()
@@ -447,28 +455,24 @@ class DatabaseChatbot:
         return None
 
     def initialize_database(self):
-        """Initialize the database connection and test it."""
+        """Initialize database connection and OpenAI client."""
         try:
-            # Load environment variables
-            load_dotenv()
+            # Initialize OpenAI client
+            self.client = AzureOpenAI(
+                api_key=self.api_key,
+                api_version=self.api_version,
+                azure_endpoint=self.endpoint
+            )
             
-            # Get connection string from environment
-            connection_string = os.getenv('AZURE_SQL_CONNECTION_STRING')
-            if not connection_string:
-                raise ValueError("AZURE_SQL_CONNECTION_STRING not found in environment variables")
-            
-            # Create connection
-            self.conn = pyodbc.connect(connection_string)
-            
-            # Test connection with a simple query
-            cursor = self.conn.cursor()
-            cursor.execute("SELECT 1")
-            cursor.close()
-            
-            print("Database connection successful!")
+            # Initialize database connection
+            params = urllib.parse.quote_plus(self.connection_string)
+            engine = create_engine(f"mssql+pyodbc:///?odbc_connect={params}")
+            self.conn = engine.connect()
+            print("Successfully connected to the database!")
             
         except Exception as e:
-            raise Exception(f"Failed to connect to database: {str(e)}")
+            print(f"Error initializing database: {str(e)}")
+            raise
 
     def get_schema_info(self) -> str:
         """Get database schema information."""

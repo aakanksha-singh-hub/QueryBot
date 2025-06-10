@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Response
+from fastapi import FastAPI, HTTPException, Response, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, Dict, Any
@@ -8,6 +8,8 @@ import json
 from db_chatbot import DatabaseChatbot
 import os
 from dotenv import load_dotenv
+import azure.cognitiveservices.speech as speechsdk
+import tempfile
 
 # Load environment variables
 load_dotenv()
@@ -32,6 +34,13 @@ chatbot = DatabaseChatbot(
     deployment_name=os.getenv('AZURE_OPENAI_DEPLOYMENT'),
     endpoint=os.getenv('AZURE_OPENAI_ENDPOINT')
 )
+
+# Initialize Speech SDK
+speech_config = speechsdk.SpeechConfig(
+    subscription=os.getenv('AZURE_SPEECH_KEY'),
+    region=os.getenv('AZURE_SPEECH_REGION')
+)
+speech_config.speech_recognition_language = "en-US"
 
 class QueryRequest(BaseModel):
     query: str
@@ -146,6 +155,41 @@ async def export_data(format: str):
             )
         else:
             raise HTTPException(status_code=400, detail="Unsupported export format")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/transcribe")
+async def transcribe_audio(audio_file: UploadFile = File(...)):
+    """Transcribe audio file to text using Azure Speech SDK."""
+    try:
+        # Save the uploaded file temporarily
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_file:
+            content = await audio_file.read()
+            temp_file.write(content)
+            temp_file.flush()
+            
+            # Create audio config from the temporary file
+            audio_config = speechsdk.audio.AudioConfig(filename=temp_file.name)
+            
+            # Create speech recognizer
+            speech_recognizer = speechsdk.SpeechRecognizer(
+                speech_config=speech_config,
+                audio_config=audio_config
+            )
+            
+            # Start recognition
+            result = speech_recognizer.recognize_once_async().get()
+            
+            # Clean up the temporary file
+            os.unlink(temp_file.name)
+            
+            if result.reason == speechsdk.ResultReason.RecognizedSpeech:
+                return {"text": result.text}
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Speech recognition failed: {result.error_details}"
+                )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
