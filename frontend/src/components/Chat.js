@@ -76,8 +76,6 @@ const VALID_QUESTIONS = [
   "What are the top 5 highest paid employees?",
   "How many employees are in each department?",
   "What is the average salary?",
-  "How many employees are in each department?",
-  "Show employees hired in 2020",
   "List departments with more than 2 employees",
 ];
 
@@ -108,6 +106,8 @@ function Chat() {
   const [isRecording, setIsRecording] = useState(false);
   const [selectedDomain, setSelectedDomain] = useState(null);
   const [error, setError] = useState(null);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [currentSuggestions, setCurrentSuggestions] = useState([]);
 
   const presetQueries = [
     "Show all employees",
@@ -269,8 +269,9 @@ function Chat() {
   };
 
   const renderMessage = (message, index) => {
+    console.log("Rendering message:", message);
     if (message.type === "system") {
-      return (
+        return (
         <Box
           key={index}
           sx={{
@@ -296,12 +297,12 @@ function Chat() {
             >
               {message.content}
             </Typography>
-          </Paper>
-        </Box>
-      );
+            </Paper>
+          </Box>
+        );
     }
 
-    return (
+        return (
       <Box
         key={index}
         sx={{
@@ -341,15 +342,16 @@ function Chat() {
                   padding: 12,
                 }}
               >
-                {message.content}
-              </SyntaxHighlighter>
-            </Box>
+              {message.content}
+            </SyntaxHighlighter>
+          </Box>
           )}
 
           {message.type === "results" &&
             Array.isArray(message.content) &&
             message.content.length > 0 && (
               <Box>
+                {console.log("Rendering results block. Content:", message.content)}
                 <Box
                   sx={{
                     display: "flex",
@@ -386,12 +388,11 @@ function Chat() {
                     backgroundColor: "rgba(0, 0, 0, 0.05)",
                     borderRadius: 1,
                     p: 1,
-                    border: "1px solid blue",
                   }}
                 >
                   <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                    <thead>
-                      <tr>
+                  <thead>
+                    <tr>
                         {Object.keys(message.content[0]).map((key) => (
                           <th
                             key={key}
@@ -403,10 +404,10 @@ function Chat() {
                           >
                             {key}
                           </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
                       {message.content.map((row, i) => (
                         <tr key={i}>
                           {Object.values(row).map((value, j) => (
@@ -419,11 +420,11 @@ function Chat() {
                             >
                               {value}
                             </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
                 </Box>
               </Box>
             )}
@@ -437,7 +438,7 @@ function Chat() {
                 Explanation:
               </Typography>
               <Typography variant="body2">{message.content}</Typography>
-            </Box>
+          </Box>
           )}
 
           {message.type === "error" && (
@@ -445,9 +446,9 @@ function Chat() {
               {message.content}
             </Alert>
           )}
-        </Paper>
-      </Box>
-    );
+            </Paper>
+          </Box>
+        );
   };
 
   const generateSuggestions = async (input) => {
@@ -501,11 +502,11 @@ function Chat() {
         domain: selectedDomain?.id,
       });
 
-      const { sql, results, explanation, suggestions } = response.data;
+      const { sql_query, results, explanation, suggestions } = response.data;
 
       setMessages((prev) => [
         ...prev,
-        { type: "sql", content: sql },
+        { type: "sql", content: sql_query },
         { type: "results", content: results },
         { type: "analysis", content: explanation },
         // Add suggestions as a separate message type if desired
@@ -550,6 +551,43 @@ function Chat() {
     XLSX.writeFile(wb, `${filename}.xlsx`);
   };
 
+  const handleSuggestQuestions = async (event) => {
+    setAnchorEl(event.currentTarget);
+    if (!selectedDomain) {
+      alert("Please select a data domain first.");
+      setShowSuggestions(false);
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const response = await axios.post(`${API_URL}/api/suggestions`, {
+        domain: selectedDomain.id,
+      });
+      setCurrentSuggestions(response.data.suggestions);
+      setShowSuggestions(true);
+    } catch (error) {
+      console.error("Error fetching suggestions:", error);
+      setError("Failed to load suggestions.");
+      setCurrentSuggestions([]);
+      setShowSuggestions(false);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCloseSuggestions = () => {
+    setAnchorEl(null);
+    setShowSuggestions(false);
+  };
+
+  const handleSuggestionClick = (suggestion) => {
+    setInput(suggestion);
+    handleCloseSuggestions();
+    // Optionally, trigger handleSend here immediately
+    // handleSend();
+  };
+
   return (
     <Box sx={{ height: "100vh", display: "flex", flexDirection: "column" }}>
       <Box sx={{ flexGrow: 1, overflow: "auto", p: 2 }}>
@@ -563,53 +601,94 @@ function Chat() {
         )}
       </Box>
 
-      <Box
-        sx={{
-          p: 2,
-          backgroundColor: "background.paper",
-          borderTop: "1px solid",
-          borderColor: "divider",
-        }}
-      >
-        <Box sx={{ display: "flex", gap: 1 }}>
-          <TextField
-            fullWidth
-            variant="outlined"
-            placeholder="Ask a question about your data..."
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyPress={handleKeyPress}
-            disabled={isLoading}
-            multiline
-            maxRows={4}
-            sx={{
-              "& .MuiOutlinedInput-root": {
-                borderRadius: 2,
-              },
-            }}
-          />
-          <Tooltip title={isRecording ? "Stop Recording" : "Start Recording"}>
-            <IconButton
-              onClick={toggleRecording}
-              color={isRecording ? "error" : "primary"}
+      {selectedDomain && (
+        <Box
+          sx={{
+            p: 2,
+            backgroundColor: "background.paper",
+            borderTop: "1px solid",
+            borderColor: "divider",
+          }}
+        >
+          <Box sx={{ display: "flex", gap: 1 }}>
+      <TextField
+        fullWidth
+        variant="outlined"
+        placeholder="Ask a question about your data..."
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyPress={handleKeyPress}
               disabled={isLoading}
+        multiline
+              maxRows={4}
+        sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 2,
+          },
+        }}
+      />
+            <Tooltip title={isRecording ? "Stop Recording" : "Start Recording"}>
+  <IconButton 
+                onClick={toggleRecording}
+                color={isRecording ? "error" : "primary"}
+                disabled={isLoading}
+              >
+                {isRecording ? <MicOffIcon /> : <MicIcon />}
+  </IconButton>
+            </Tooltip>
+            <Button
+              variant="contained"
+              onClick={handleSend}
+              disabled={isLoading || !input.trim()}
+              sx={{
+                borderRadius: 2,
+                minWidth: "100px",
+              }}
             >
-              {isRecording ? <MicOffIcon /> : <MicIcon />}
-            </IconButton>
-          </Tooltip>
-          <Button
-            variant="contained"
-            onClick={handleSend}
-            disabled={isLoading || !input.trim()}
-            sx={{
-              borderRadius: 2,
-              minWidth: "100px",
+              {isLoading ? <CircularProgress size={24} /> : <SendIcon />}
+            </Button>
+</Box>
+
+          <Grid item xs={12} sx={{ mt: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+              <Button
+                variant="outlined"
+                onClick={handleSuggestQuestions}
+                disabled={isLoading}
+                sx={{
+                  textTransform: 'none',
+                  borderColor: theme.palette.primary.main,
+                  color: theme.palette.primary.main,
+                  '&:hover': {
+                    borderColor: theme.palette.primary.dark,
+                  }
+                }}
+              >
+                Suggest Questions
+              </Button>
+            </Box>
+          </Grid>
+
+        <Menu
+          anchorEl={anchorEl}
+            open={showSuggestions}
+            onClose={handleCloseSuggestions}
+            MenuListProps={{
+              'aria-labelledby': 'suggestions-button',
             }}
           >
-            {isLoading ? <CircularProgress size={24} /> : <SendIcon />}
-          </Button>
-        </Box>
-      </Box>
+            {currentSuggestions.length > 0 ? (
+              currentSuggestions.map((suggestion, index) => (
+                <MenuItem key={index} onClick={() => handleSuggestionClick(suggestion)}>
+                  {suggestion}
+          </MenuItem>
+              ))
+            ) : (
+              <MenuItem disabled>No suggestions available</MenuItem>
+            )}
+        </Menu>
+          </Box>
+        )}
 
       <Snackbar
         open={!!error}

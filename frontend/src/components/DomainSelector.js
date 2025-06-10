@@ -17,7 +17,7 @@ const domains = [
     id: 'sales',
     name: 'Sales Performance',
     icon: <BarChartIcon sx={{ fontSize: 40 }} />,
-    description: 'Uncover revenue trends, product success, and regional performance with rich sales insights',
+    description: 'Uncover revenue trends, product success, and performance with rich sales insights',
     schema: {
       tables: ['sales', 'products', 'customers', 'regions'],
       kpis: ['Revenue', 'Growth Rate', 'Customer Acquisition Cost', 'Average Order Value']
@@ -72,7 +72,7 @@ const DomainSelector = ({ onSelectDomain }) => {
                 }}
                 onClick={() => onSelectDomain(domain)}
               >
-                <CardContent>
+                <CardContent sx={{ minHeight: '200px' }}>
                   <Box
                     sx={{
                       display: 'flex',

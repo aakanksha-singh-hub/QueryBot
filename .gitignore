@@ -55,6 +55,8 @@ visualizations/
 *.log
 my_new_env/
 endpoint_log.txt
+mock_data/
+seed_to_azure.py
 
 # Frontend build
 frontend/build/
