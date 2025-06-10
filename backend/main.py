@@ -2,7 +2,7 @@ import openai
 print("OPENAI VERSION:", openai.__version__)
 print("OPENAI FILE:", openai.__file__)
 
-from fastapi import FastAPI, APIRouter, HTTPException, Depends
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy import create_engine, text
@@ -17,8 +17,10 @@ import logging
 from datetime import datetime
 import io
 import csv
-from tenacity import retry, stop_after_attempt, wait_exponential
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 import azure.cognitiveservices.speech as speechsdk
+import tempfile
+import time # Import time for sleep
 
 # Load environment variables
 load_dotenv()
@@ -75,6 +77,20 @@ if not AZURE_SPEECH_KEY or not AZURE_SPEECH_REGION:
 
 speech_config = speechsdk.SpeechConfig(subscription=AZURE_SPEECH_KEY, region=AZURE_SPEECH_REGION)
 speech_config.speech_synthesis_voice_name='en-US-JennyNeural'
+
+# Models
+class QueryInput(BaseModel):
+    query: Optional[str] = None
+    question: Optional[str] = None
+
+class SuggestionRequest(BaseModel):
+    domain: Optional[str] = None
+
+class ExportRequest(BaseModel):
+    data: List[Dict[str, Any]]
+
+class TTSRequest(BaseModel):
+    text: str
 
 # Domain schemas for suggestions
 DOMAIN_SCHEMAS = {
@@ -186,33 +202,14 @@ DOMAIN_SCHEMAS = {
     }
 }
 
-# Models
-class QueryInput(BaseModel):
-    query: Optional[str] = None
-    question: Optional[str] = None
-
-class SuggestionRequest(BaseModel):
-    domain: Optional[str] = None
-
-class ExportRequest(BaseModel):
-    data: List[Dict[str, Any]]
-
 # Utility: Get schema
 def get_schema_info(db: Session) -> Dict[str, Any]:
     schema = {}
-    tables_query = text("""
-    SELECT table_name
-    FROM information_schema.tables
-    WHERE table_schema = 'dbo'
-""")
+    tables_query = text("SELECT table_name FROM information_schema.tables WHERE table_schema = 'dbo'")
     tables = [row[0] for row in db.execute(tables_query)]
 
     for table in tables:
-        columns_query = text(f"""
-            SELECT column_name, data_type
-            FROM information_schema.columns
-            WHERE table_name = '{table}'
-        """)
+        columns_query = text(f"SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '{table}'")
         columns = [{"name": row[0], "type": row[1]} for row in db.execute(columns_query)]
         schema[table] = columns
     return schema
@@ -228,6 +225,31 @@ def format_schema_for_prompt(schema_info):
     return "\n".join(lines)
 
 # Utility: Generate SQL from natural query
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10), retry=retry_if_exception_type(openai.error.RateLimitError))
+def get_completion(messages):
+    try:
+        response = openai.ChatCompletion.create(
+            engine="gpt-4",
+            messages=messages,
+            temperature=0.7,
+            max_tokens=800
+        )
+        content = response.choices[0].message.content.strip()
+        
+        # Strip markdown code blocks if present
+        if content.startswith("```") and content.endswith("```"):
+            content = content[3:-3].strip()
+            if content.startswith("json"):
+                content = content[4:].strip()
+        
+        return content
+    except openai.error.RateLimitError as e:
+        logger.warning(f"OpenAI API rate limit hit. Retrying... Error: {e}")
+        raise # Re-raise to trigger tenacity retry
+    except Exception as e:
+        logger.error(f"Error in get_completion: {e}", exc_info=True)
+        raise
+
 def generate_sql(natural_query: str, schema_info: dict) -> Dict[str, str]:
     schema_str = format_schema_for_prompt(schema_info)
     prompt = f"""
@@ -240,6 +262,7 @@ Format your response as JSON like this:
     "sql_query": "...",
     "explanation": "..."
 }}
+Ensure all column names in the generated SQL are fully qualified with their respective table aliases when ambiguous (e.g., table_alias.column_name).
 """
     try:
         message = get_completion(
@@ -263,15 +286,20 @@ Format your response as JSON like this:
             print("❌ JSON Parse Error:", e)
             print("Raw message that failed to parse (after cleaning):", message)
             return {
-                "sql_query": "SELECT TOP 5 * FROM employees ORDER BY salary DESC",
-                "explanation": "Showing top 5 highest paid employees"
+                "sql_query": "", # Return empty SQL on parse failure
+                "explanation": "I could not generate a valid SQL query. Please try rephrasing your question."
             }
     except Exception as e:
-        print("❌ OpenAI API Error or other error:", e)
+        print("❌ OpenAI API Error or other error during SQL generation:", e)
         raise HTTPException(status_code=500, detail=str(e))
 
 # Utility: Execute SQL query
 def execute_query(sql_query: str, db: Session) -> List[Dict[str, Any]]:
+    # Fix 1: Validate query before execution
+    if not sql_query.strip():
+        logger.warning("Attempted to execute an empty SQL query.")
+        raise HTTPException(status_code=400, detail="Empty SQL query received.")
+
     try:
         result = db.execute(text(sql_query))
         columns = result.keys()
@@ -281,8 +309,8 @@ def execute_query(sql_query: str, db: Session) -> List[Dict[str, Any]]:
             print(f"Row {idx}: {row}")
         return [{col: val for col, val in zip(columns, row)} for row in rows]
     except Exception as e:
-        print("❌ Exception in execute_query:", e)
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.error(f"❌ Exception in execute_query: {e}", exc_info=True)
+        raise HTTPException(status_code=400, detail=f"Database query failed: {str(e)}")
 
 # API Router
 api_router = APIRouter(prefix="/api")
@@ -299,21 +327,39 @@ async def process_query(data: QueryInput, db: Session = Depends(get_db)):
         sql_query = response_data["sql_query"]
         explanation = response_data["explanation"]
 
-        results = execute_query(sql_query, db)
+        results = []
+        error = None
+        if sql_query: # Only execute if SQL query is not empty
+            try:
+                results = execute_query(sql_query, db)
+            except HTTPException as e:
+                error = e.detail # Capture the error message from execute_query
+                sql_query = "" # Clear SQL if execution failed to prevent display of bad query
+                results = []
+        else: # If generate_sql returned an empty query
+            error = explanation # Use the explanation from generate_sql as the error message
+
         return {
             "sql_query": sql_query,
             "results": results,
             "explanation": explanation,
-            "error": None
+            "error": error
         }
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
+    except HTTPException as e: # Catch HTTPExceptions from generate_sql as well
+        logger.error(f"HTTPException in process_query: {e.detail}", exc_info=True)
         return {
             "sql_query": "",
             "results": [],
             "explanation": "",
-            "error": str(e)
+            "error": e.detail
+        }
+    except Exception as e:
+        logger.error(f"Unhandled exception in process_query: {e}", exc_info=True)
+        return {
+            "sql_query": "",
+            "results": [],
+            "explanation": "",
+            "error": "An unexpected error occurred. Please try again."
         }
 
 @api_router.post("/suggestions")
@@ -379,28 +425,69 @@ def export_csv(request: ExportRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @api_router.post("/synthesize_speech")
-async def synthesize_speech(text_to_speak: str):
+async def synthesize_speech(request: TTSRequest):
+    logger.info(f"Received request to synthesize speech for text: {request.text[:50]}...")
+    audio_filename = None
     try:
-        # Create a speech synthesizer
-        speech_synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config)
-
+        # Create a temporary file to store the audio
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.wav') as temp_file:
+            audio_filename = temp_file.name
+        
+        # Set up audio output to the temporary file
+        audio_config = speechsdk.audio.AudioOutputConfig(filename=audio_filename)
+        
+        # Create a speech synthesizer with the file output configuration
+        speech_synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config, audio_config=audio_config)
+        
+        logger.info(f"Synthesizing speech to temporary file: {audio_filename}")
         # Synthesize text to speech
-        result = speech_synthesizer.speak_text_async(text_to_speak).get()
+        result = speech_synthesizer.speak_text_async(request.text).get()
 
         if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
-            # Get the audio data
-            audio_data = result.audio_data
+            logger.info("Speech synthesis completed successfully.")
+            
+            # Explicitly close the temporary file handle BEFORE reading
+            temp_file.close()
+
+            # Read the entire audio data into memory from the now-closed file
+            with open(audio_filename, 'rb') as audio_file_read:
+                audio_data = audio_file_read.read()
+
+            # Clean up the temporary file immediately after reading
+            # Adding a small delay to allow Windows to release the handle fully
+            time.sleep(0.1) # Small delay before attempting unlink
+            try:
+                os.unlink(audio_filename)
+                logger.info(f"Temporary audio file {audio_filename} deleted.")
+            except PermissionError as perm_e:
+                logger.warning(f"PermissionError when deleting {audio_filename}: {perm_e}. Will try again later.")
+                # If deletion fails due to permission, let the OS handle it or set up a deferred cleanup
+                pass # Continue, as the response can still be sent
 
             # Return the audio data as a streaming response
             return StreamingResponse(
-                iter([audio_data]),
+                io.BytesIO(audio_data), # Stream from BytesIO object
                 media_type="audio/wav",
                 headers={"Content-Disposition": "attachment; filename=speech.wav"}
             )
         else:
-            raise HTTPException(status_code=500, detail="Speech synthesis failed")
+            error_details = "N/A"
+            if result.reason == speechsdk.ResultReason.Canceled:
+                cancellation_details = result.cancellation_details
+                error_details = f"Reason: {cancellation_details.reason}, Error Code: {cancellation_details.error_code}, Error Details: {cancellation_details.error_details}"
+            logger.error(f"Speech synthesis failed. Reason: {result.reason}. {error_details}")
+            raise HTTPException(status_code=500, detail=f"Speech synthesis failed. {error_details}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Exception during speech synthesis: {e}", exc_info=True)
+        # Ensure temp file is cleaned up if an error occurs before explicit unlink,
+        # and after a potential PermissionError during unlink.
+        if audio_filename and os.path.exists(audio_filename):
+            try:
+                os.unlink(audio_filename)
+                logger.info(f"Temporary audio file {audio_filename} deleted after error.")
+            except PermissionError as perm_e:
+                logger.warning(f"PermissionError when deleting {audio_filename} during error handling: {perm_e}.")
+        raise HTTPException(status_code=500, detail=f"Speech synthesis failed: {str(e)}")
 
 @api_router.get("/ping")
 def ping():
@@ -426,27 +513,5 @@ def health():
 def transcribe_audio():
     return {"message": "Audio transcription endpoint"}
 
-@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
-def get_completion(messages):
-    try:
-        response = openai.ChatCompletion.create(
-            engine="gpt-4",
-            messages=messages,
-            temperature=0.7,
-            max_tokens=800
-        )
-        content = response.choices[0].message.content.strip()
-        
-        # Strip markdown code blocks if present
-        if content.startswith("```") and content.endswith("```"):
-            content = content[3:-3].strip()
-            if content.startswith("json"):
-                content = content[4:].strip()
-        
-        return content
-    except Exception as e:
-        print(f"❌ Error in get_completion: {e}")
-        raise
-
-# Include the API router in the main app (moved to end of file)
+# Include the API router in the main app
 app.include_router(api_router)

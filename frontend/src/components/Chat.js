@@ -30,7 +30,8 @@ import {
   ShowChart as LineChartIcon,
   Mic as MicIcon,
   MicOff as MicOffIcon,
-  Download as DownloadIcon
+  Download as DownloadIcon,
+  VolumeUp as VolumeUpIcon
 } from '@mui/icons-material';
 import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { docco } from 'react-syntax-highlighter/dist/esm/styles/hljs';
@@ -108,6 +109,8 @@ function Chat() {
   const [error, setError] = useState(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [currentSuggestions, setCurrentSuggestions] = useState([]);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const audioRef = useRef(null);
 
   const presetQueries = [
     "Show all employees",
@@ -446,6 +449,31 @@ function Chat() {
               {message.content}
             </Alert>
           )}
+
+          {(message.type === 'analysis' || message.type === 'sql') && (
+            <Box sx={{ mt: 1, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+              {message.content && (
+                <IconButton
+                  onClick={() => handleSpeak(message.content)}
+                  disabled={isSpeaking}
+                  size="small"
+                  title="Speak Answer"
+                >
+                  <VolumeUpIcon />
+                </IconButton>
+              )}
+              {message.sql_query && (
+                <IconButton
+                  onClick={() => handleSpeak(message.sql_query)}
+                  disabled={isSpeaking}
+                  size="small"
+                  title="Speak SQL"
+                >
+                  <VolumeUpIcon />
+                </IconButton>
+              )}
+            </Box>
+          )}
             </Paper>
           </Box>
         );
@@ -588,6 +616,58 @@ function Chat() {
     // handleSend();
   };
 
+  const handleSpeak = async (text) => {
+    console.log("handleSpeak called with text:", text);
+    try {
+      setIsSpeaking(true);
+      const response = await fetch('http://localhost:8000/api/synthesize_speech', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to synthesize speech');
+      }
+
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      console.log("Generated audio URL:", audioUrl);
+      
+      if (audioRef.current) {
+        console.log("Audio ref current exists.", audioRef.current);
+        audioRef.current.src = audioUrl;
+        audioRef.current.load(); // Ensure audio element is ready
+        audioRef.current.volume = 1; // Ensure volume is not zero
+
+        // Add a small delay before attempting to play
+        setTimeout(() => {
+          const playPromise = audioRef.current.play();
+
+          if (playPromise !== undefined) {
+            playPromise.then(() => {
+              console.log("Audio playback started successfully.");
+            }).catch(error => {
+              console.error("Audio playback prevented or failed:", error);
+              alert("Audio playback was prevented by the browser. Please interact with the page first or check browser settings.");
+            });
+          } else {
+            console.log("Audio playback initiated without promise.");
+          }
+        }, 50); // 50ms delay
+      } else {
+        console.error("Audio ref current is NULL. Audio element might not be rendered.");
+      }
+    } catch (error) {
+      console.error('Error synthesizing speech:', error);
+      alert("An error occurred during speech synthesis. Check console for details.");
+    } finally {
+      setIsSpeaking(false);
+    }
+  };
+
   return (
     <Box sx={{ height: "100vh", display: "flex", flexDirection: "column" }}>
       <Box sx={{ flexGrow: 1, overflow: "auto", p: 2 }}>
@@ -699,6 +779,9 @@ function Chat() {
           {error}
         </Alert>
       </Snackbar>
+
+      {/* Audio element moved here for direct access by audioRef */}
+      <audio ref={audioRef} style={{ display: 'none' }} controls />
     </Box>
   );
 }
