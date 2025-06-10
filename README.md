@@ -4,17 +4,44 @@ A modern, production-ready GenAI SQL chatbot platform that enables users to quer
 
 ---
 
-## Features
+## ✨ Key Features of the Voice-Enabled Data Interpreter Assistant
 
-- **Natural Language to SQL**: Ask questions in plain English, get instant SQL and results.
-- **Azure OpenAI Integration**: Uses GPT-4 for accurate NL-to-SQL translation.
-- **Azure SQL Database**: Secure, enterprise-grade data storage.
-- **Conversational Chat UI**: Multi-turn, context-aware chat interface.
-- **Database Explorer**: Connect, browse tables, view schema, and preview data.
-- **Export & Visualization**: Download results (CSV, Excel, JSON) and view charts.
-- **Light/Dark Mode**: Beautiful, accessible UI for all users.
-- **Security**: Credentials handled securely, no password logging, read-only queries.
-- **Voice Output (Text-to-Speech)**: Convert assistant's responses into spoken audio for enhanced accessibility and interactivity.
+### 📂 1. Dashboard Explorer: Select a Data Domain
+Let users choose the type of data they want to explore, so the assistant understands the context and tailors responses accurately.
+**What it does:**
+- Presents predefined domains like:
+    - 📊 Sales Performance
+    - 🎟️ Customer Support Tickets
+    - 👥 Employee Productivity
+- Automatically loads:
+    - Schema (table/field names)
+    - KPI definitions
+    - Domain-specific prompt templates
+
+### 🧠 2. Domain-Aware Query Handling (Smart Prompting + SQL Generation)
+Allow natural language queries like:
+"How did North region perform in March?"
+"Compare this quarter with the previous one."
+**What it does:**
+- Translates user query into SQL using GPT
+- Handles fuzzy, human-like questions
+- Injects schema and KPI context into GPT prompts
+
+### 🧾 3. Natural Language Summary of Raw Data
+Go beyond SQL rows — explain results in plain English for business users.
+**What it does:**
+- Converts query results into a concise explanation
+- Adds comparison logic (e.g., vs target, vs last period)
+**Example output:**
+"In March, North region achieved $500K in sales, falling short by $100K from the target of $600K."
+
+### 🗣️ 4. Voice Output (Text-to-Speech)
+Let the assistant speak the final answer aloud.
+**What it does:**
+- Converts text summary into spoken response
+- Enhances accessibility and user experience
+- Provides a "🔊 Speak Answer" button that plays the spoken version of the response.
+- Optionally, auto-reads the answer after summarization or successful query execution.
 
 ---
 
@@ -30,7 +57,7 @@ A modern, production-ready GenAI SQL chatbot platform that enables users to quer
 | Backend    | FastAPI                   | REST API framework                      |
 |            | SQLAlchemy                | Database connection/ORM                 |
 |            | Pandas                    | Data manipulation                       |
-|            | Azure OpenAI (GPT-4)      | NL-to-SQL translation                   |
+|            | Azure OpenAI (GPT-4)      | NL-to-SQL translation, Summarization, Prompting |
 |            | Azure SQL Database        | Data storage                            |
 |            | Azure Speech Service      | Text-to-Speech capabilities             |
 |            | Uvicorn                   | ASGI server                             |
@@ -60,7 +87,7 @@ A modern, production-ready GenAI SQL chatbot platform that enables users to quer
    ```
 2. Install Python dependencies:
    ```bash
-   pip install -r requirements.txt
+   pip install -r backend/requirements.txt
    ```
 3. Start the backend:
    ```bash
@@ -86,12 +113,11 @@ A modern, production-ready GenAI SQL chatbot platform that enables users to quer
 ## Usage
 
 1. Go to `http://localhost:3000`
-2. Click **Connect** to enter your Azure SQL credentials.
-3. Explore your dataset, view schemas, and preview data.
-4. Go to **Chat** and ask questions in natural language.
-5. View results in a table and as visualizations.
+2. Select a data domain using the **Dashboard Explorer**.
+3. Go to **Chat** and ask questions in natural language.
+4. View results in a table and as visualizations, along with a **Natural Language Summary**.
+5. Click the **🔊 Speak Answer** button next to assistant responses to hear them read aloud.
 6. Export results as CSV, Excel, or JSON.
-7. Click the **🔊 Speak Answer** button next to assistant responses to hear them read aloud.
 
 ---
 
@@ -144,5 +170,6 @@ MIT License
 
 - Azure OpenAI Service
 - Azure SQL Database
+- Azure Speech Service
 - Python Data Science Stack (pandas, numpy)
 - Material UI & React Community 
