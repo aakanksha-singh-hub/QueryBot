@@ -70,7 +70,7 @@ import {
 
 const SPEECH_KEY = process.env.REACT_APP_SPEECH_KEY;
 const SPEECH_REGION = process.env.REACT_APP_SPEECH_REGION;
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+const API_URL = process.env.REACT_APP_API_URL || 'https://data-analyser-with-voice.onrender.com';
 
 const VALID_QUESTIONS = [
   "Show all employees",
