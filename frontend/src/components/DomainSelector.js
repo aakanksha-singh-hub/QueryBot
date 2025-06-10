@@ -17,7 +17,7 @@ const domains = [
     id: 'sales',
     name: 'Sales Performance',
     icon: <BarChartIcon sx={{ fontSize: 40 }} />,
-    description: 'Analyze sales metrics, revenue trends, and product performance',
+    description: 'Uncover revenue trends, product success, and regional performance with rich sales insights',
     schema: {
       tables: ['sales', 'products', 'customers', 'regions'],
       kpis: ['Revenue', 'Growth Rate', 'Customer Acquisition Cost', 'Average Order Value']
@@ -27,7 +27,7 @@ const domains = [
     id: 'support',
     name: 'Customer Support',
     icon: <SupportIcon sx={{ fontSize: 40 }} />,
-    description: 'Track ticket resolution, customer satisfaction, and support metrics',
+    description: 'Understand support efficiency, resolution times, and customer satisfaction levels',
     schema: {
       tables: ['tickets', 'customers', 'agents', 'departments'],
       kpis: ['Resolution Time', 'Customer Satisfaction', 'First Response Time', 'Ticket Volume']
@@ -37,7 +37,7 @@ const domains = [
     id: 'employee',
     name: 'Employee Productivity',
     icon: <PeopleIcon sx={{ fontSize: 40 }} />,
-    description: 'Monitor team performance, project completion, and resource utilization',
+    description: 'Track workforce impact, project progress, and department-wise productivity',
     schema: {
       tables: ['employees', 'projects', 'departments', 'attendance'],
       kpis: ['Project Completion Rate', 'Resource Utilization', 'Team Performance', 'Attendance Rate']
