@@ -16,14 +16,21 @@ import {
   Card,
   CardContent,
   Autocomplete,
-  useTheme
+  useTheme,
+  Tooltip,
+  Divider,
+  Alert,
+  Snackbar
 } from '@mui/material';
 import { 
   Send as SendIcon, 
   Save as SaveIcon,
   BarChart as BarChartIcon,
   PieChart as PieChartIcon,
-  ShowChart as LineChartIcon
+  ShowChart as LineChartIcon,
+  Mic as MicIcon,
+  MicOff as MicOffIcon,
+  Download as DownloadIcon
 } from '@mui/icons-material';
 import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { docco } from 'react-syntax-highlighter/dist/esm/styles/hljs';
@@ -38,12 +45,27 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   Legend,
   ResponsiveContainer
 } from 'recharts';
 import VoiceInput from './VoiceInput';
 import VoiceButton from './VoiceButton';
+import DomainSelector from './DomainSelector';
+import * as XLSX from 'xlsx';
+import { Pie as PieChartJS, Bar as BarChartJS } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  ArcElement,
+  Tooltip as ChartTooltip,
+  Legend as ChartLegend,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title as ChartTitle,
+  PieController,
+  BarController,
+} from 'chart.js';
 
 const SPEECH_KEY = process.env.REACT_APP_SPEECH_KEY;
 const SPEECH_REGION = process.env.REACT_APP_SPEECH_REGION;
@@ -59,16 +81,33 @@ const VALID_QUESTIONS = [
   "List departments with more than 2 employees",
 ];
 
+// Register ChartJS components
+ChartJS.register(
+  ArcElement,
+  ChartTooltip,
+  ChartLegend,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  ChartTitle,
+  PieController,
+  BarController
+);
+
 function Chat() {
   const theme = useTheme();
-  const [query, setQuery] = useState('');
+  const [input, setInput] = useState('');
   const [messages, setMessages] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [schemaInfo, setSchemaInfo] = useState(null);
   const [anchorEl, setAnchorEl] = useState(null);
   const [visualizationType, setVisualizationType] = useState(null);
   const [suggestions, setSuggestions] = useState([]);
   const messagesEndRef = useRef(null);
+  const recognitionRef = useRef(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [selectedDomain, setSelectedDomain] = useState(null);
+  const [error, setError] = useState(null);
 
   const presetQueries = [
     "Show all employees",
@@ -99,178 +138,28 @@ function Chat() {
     scrollToBottom();
   }, [messages]);
 
-  const handleQuery = async () => {
-    if (!query.trim()) return;
+  useEffect(() => {
+    // Initialize speech recognition
+    if ("webkitSpeechRecognition" in window) {
+      recognitionRef.current = new window.webkitSpeechRecognition();
+      recognitionRef.current.continuous = true;
+      recognitionRef.current.interimResults = true;
 
-    setLoading(true);
-    const userMessage = { type: 'user', content: query };
-    setMessages(prev => [...prev, userMessage]);
+      recognitionRef.current.onresult = (event) => {
+        const transcript = Array.from(event.results)
+          .map((result) => result[0])
+          .map((result) => result.transcript)
+          .join("");
 
-    // --- START: DEMO ONLY CODE (DO NOT PUSH TO GITHUB) ---
-    if (query.toLowerCase() === "performance score trend") {
-      await new Promise(resolve => setTimeout(resolve, 800)); // Simulate loading
-      const dummyResults = [
-        { Period: 'Jan-Mar', 'Performance Score': 3.5 },
-        { Period: 'Apr-Jun', 'Performance Score': 3.8 },
-        { Period: 'Jul-Sep', 'Performance Score': 4.0 },
-        { Period: 'Oct-Dec', 'Performance Score': 4.2 },
-        { Period: 'Jan-Mar 2025', 'Performance Score': 4.5 },
-      ];
-      setMessages(prev => [
-        ...prev,
-        { type: 'sql', content: `-- Simulated SQL for: performance score trend` },
-        { type: 'results', content: dummyResults },
-        { type: 'analysis', content: 'Simulated analysis: Performance scores show a positive upward trend over the recent periods.' }
-      ]);
-      setVisualizationType('line'); // Force line chart
-      setLoading(false);
-      setQuery('');
-      return; // Exit here to prevent backend call
-    } else if (query.toLowerCase() === "how many employees in each department") {
-      await new Promise(resolve => setTimeout(resolve, 800)); // Simulate loading
-      const dummyResults = [
-        { Department: 'Sales', 'Employee Count': 150 },
-        { Department: 'Marketing', 'Employee Count': 80 },
-        { Department: 'Engineering', 'Employee Count': 220 },
-        { Department: 'HR', 'Employee Count': 50 },
-        { Department: 'Finance', 'Employee Count': 100 },
-      ];
-      setMessages(prev => [
-        ...prev,
-        { type: 'sql', content: `-- Simulated SQL for: how many employees in each department` },
-        { type: 'results', content: dummyResults },
-        { type: 'analysis', content: 'Simulated analysis: This bar chart shows the distribution of employees across different departments.' }
-      ]);
-      setVisualizationType('bar'); // Force bar chart
-      setLoading(false);
-      setQuery('');
-      return; // Exit here to prevent backend call
-    } else if (query.toLowerCase() === "what is the average salary") {
-      await new Promise(resolve => setTimeout(resolve, 800)); // Simulate loading
-      const dummyResults = [
-        { 'Department': 'Finance', 'Average Salary': 76500 },
-        { 'Department': 'Human Resources', 'Average Salary': 65000 },
-        { 'Department': 'IT', 'Average Salary': 85000 },
-        { 'Department': 'Marketing', 'Average Salary': 70000 },
-        { 'Department': 'Sales', 'Average Salary': 95000 },
-        { 'Department': 'Research', 'Average Salary': 82000 },
-      ];
-      setMessages(prev => [
-        ...prev,
-        { type: 'sql', content: `-- Simulated SQL for: what is the average salary` },
-        { type: 'results', content: dummyResults },
-        { type: 'analysis', content: 'Simulated analysis: Average salaries across various departments.' }
-      ]);
-      setVisualizationType('bar'); // Force bar chart
-      setLoading(false);
-      setQuery('');
-      return; // Exit here to prevent backend call
-    } else if (query.toLowerCase() === "show all employees") {
-      await new Promise(resolve => setTimeout(resolve, 800)); // Simulate loading
-      const dummyResults = [
-        { id: 1, name: 'John Doe', department: 'Finance', salary: 75000 },
-        { id: 2, name: 'Jane Smith', department: 'HR', salary: 65000 },
-        { id: 3, name: 'Alice Johnson', department: 'IT', salary: 85000 },
-        { id: 4, name: 'Bob Brown', department: 'Marketing', salary: 70000 },
-        { id: 5, name: 'Carol White', department: 'Finance', salary: 78000 },
-      ];
-      setMessages(prev => [
-        ...prev,
-        { type: 'sql', content: `-- Simulated SQL for: show all employees` },
-        { type: 'results', content: dummyResults },
-        { type: 'analysis', content: 'Simulated analysis: Displaying all available employee records.' }
-      ]);
-      setVisualizationType(null); // Let it default to table or keep current visualization
-      setLoading(false);
-      setQuery('');
-      return; // Exit here to prevent backend call
-    } else if (query.toLowerCase() === "what are the top 5 highest paid employees?") {
-      await new Promise(resolve => setTimeout(resolve, 800)); // Simulate loading
-      const dummyResults = [
-        { id: 1, name: 'Alice Johnson', salary: 85000 },
-        { id: 2, name: 'Carol White', salary: 78000 },
-        { id: 3, name: 'John Doe', salary: 75000 },
-        { id: 4, name: 'Bob Brown', salary: 70000 },
-        { id: 5, name: 'Jane Smith', salary: 65000 },
-      ];
-      setMessages(prev => [
-        ...prev,
-        { type: 'sql', content: `-- Simulated SQL for: what are the top 5 highest paid employees?` },
-        { type: 'results', content: dummyResults },
-        { type: 'analysis', content: 'Simulated analysis: Here are the top 5 highest paid employees based on available data.' }
-      ]);
-      setVisualizationType(null); // Let it default to table
-      setLoading(false);
-      setQuery('');
-      return; // Exit here to prevent backend call
-    } else if (query.toLowerCase() === "show employees hired in 2020") {
-      await new Promise(resolve => setTimeout(resolve, 800)); // Simulate loading
-      const dummyResults = [
-        { id: 1, name: 'John Doe', department: 'Finance', hire_date: '2020-01-15' },
-        { id: 4, name: 'Bob Brown', department: 'Marketing', hire_date: '2020-11-05' },
-      ];
-      setMessages(prev => [
-        ...prev,
-        { type: 'sql', content: `-- Simulated SQL for: show employees hired in 2020` },
-        { type: 'results', content: dummyResults },
-        { type: 'analysis', content: 'Simulated analysis: Displaying employees hired in 2020.' }
-      ]);
-      setVisualizationType(null); // Let it default to table
-      setLoading(false);
-      setQuery('');
-      return; // Exit here to prevent backend call
-    } else if (query.toLowerCase() === "list departments with more than 2 employees") {
-      await new Promise(resolve => setTimeout(resolve, 800)); // Simulate loading
-      const dummyResults = [
-        { Department: 'Sales', 'Employee Count': 150 },
-        { Department: 'Engineering', 'Employee Count': 220 },
-        { Department: 'Finance', 'Employee Count': 100 },
-      ];
-      setMessages(prev => [
-        ...prev,
-        { type: 'sql', content: `-- Simulated SQL for: list departments with more than 2 employees` },
-        { type: 'results', content: dummyResults },
-        { type: 'analysis', content: 'Simulated analysis: Departments with a significant number of employees.' }
-      ]);
-      setVisualizationType('bar'); // Force bar chart for this
-      setLoading(false);
-      setQuery('');
-      return; // Exit here to prevent backend call
+        setInput(transcript);
+      };
+
+      recognitionRef.current.onerror = (event) => {
+        console.error("Speech recognition error:", event.error);
+        setIsRecording(false);
+      };
     }
-    // --- END: DEMO ONLY CODE ---
-
-    try {
-      const response = await axios.post(`${API_URL}/api/query`, { query });
-      const { sql, results, analysis } = response.data;
-      
-      setMessages(prev => [
-        ...prev,
-        { type: 'sql', content: sql },
-        { type: 'results', content: results },
-        { type: 'analysis', content: analysis }
-      ]);
-
-      // Auto-detect visualization type based on results
-      if (Array.isArray(results) && results.length > 0) {
-        const firstRow = results[0];
-        const numericColumns = Object.entries(firstRow)
-          .filter(([_, value]) => typeof value === 'number')
-          .map(([key]) => key);
-
-        if (numericColumns.length >= 2) {
-          setVisualizationType('bar');
-        }
-      }
-    } catch (error) {
-      setMessages(prev => [
-        ...prev,
-        { type: 'error', content: error.response?.data?.error || 'An error occurred' }
-      ]);
-    }
-
-    setLoading(false);
-    setQuery('');
-  };
+  }, []);
 
   const handleExport = async (format) => {
     // Find the latest results message
@@ -336,7 +225,7 @@ function Chat() {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" />
               <YAxis />
-              <Tooltip />
+              <RechartsTooltip />
               <Legend />
               <Bar dataKey="value" fill="#8884d8" />
             </BarChart>
@@ -356,7 +245,7 @@ function Chat() {
                 fill="#8884d8"
                 label
               />
-              <Tooltip />
+              <RechartsTooltip />
               <Legend />
             </PieChart>
           </ResponsiveContainer>
@@ -368,7 +257,7 @@ function Chat() {
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="name" />
               <YAxis />
-              <Tooltip />
+              <RechartsTooltip />
               <Legend />
               <Line type="monotone" dataKey="value" stroke="#8884d8" />
             </LineChart>
@@ -379,76 +268,186 @@ function Chat() {
     }
   };
 
-  const renderMessage = (message) => {
-    switch (message.type) {
-      case 'user':
-        return (
-          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
-            <Paper sx={{ p: 2, maxWidth: '70%', bgcolor: theme.palette.background.paper }}>
-              <Typography>{message.content}</Typography>
-            </Paper>
-          </Box>
-        );
-      case 'sql':
-        return (
-          <Box sx={{ mb: 2 }}>
-            <Typography variant="subtitle2" color={theme.palette.text.secondary}>Generated SQL:</Typography>
-            <SyntaxHighlighter language="sql" style={docco}>
+  const renderMessage = (message, index) => {
+    if (message.type === "system") {
+      return (
+        <Box
+          key={index}
+          sx={{
+            display: "flex",
+            justifyContent: "center",
+            mb: 2,
+          }}
+        >
+          <Paper
+            sx={{
+              p: 2,
+              backgroundColor: "background.paper",
+              border: "1px solid",
+              borderColor: "divider",
+              borderRadius: 2,
+              maxWidth: "80%",
+            }}
+          >
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ textAlign: "center" }}
+            >
               {message.content}
-            </SyntaxHighlighter>
-          </Box>
-        );
-      case 'results':
-        return (
-          <Box sx={{ mb: 2 }}>
-            <Typography variant="subtitle2" color="text.secondary">Results:</Typography>
-            <Paper sx={{ p: 2, overflowX: 'auto' }}>
-              {Array.isArray(message.content) && message.content.length > 0 ? (
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr>
-                      {Object.keys(message.content[0]).map((col) => (
-                        <th key={col} style={{ borderBottom: '1px solid #ccc', padding: '8px', textAlign: 'left' }}>{col}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {message.content.map((row, idx) => (
-                      <tr key={idx}>
-                        {Object.values(row).map((val, i) => (
-                          <td key={i} style={{ borderBottom: '1px solid #eee', padding: '8px' }}>{val}</td>
+            </Typography>
+          </Paper>
+        </Box>
+      );
+    }
+
+    return (
+      <Box
+        key={index}
+        sx={{
+          display: "flex",
+          justifyContent: message.type === "user" ? "flex-end" : "flex-start",
+          mb: 2,
+        }}
+      >
+        <Paper
+          sx={{
+            p: 2,
+            backgroundColor:
+              message.type === "user" ? "primary.main" : "background.paper",
+            color: message.type === "user" ? "white" : "text.primary",
+            maxWidth: "70%",
+            borderRadius: 2,
+          }}
+        >
+          {message.type === "user" && (
+            <Typography variant="body1">{message.content}</Typography>
+          )}
+
+          {message.type === "sql" && (
+            <Box>
+              <Typography
+                variant="subtitle2"
+                sx={{ color: "text.secondary", mb: 1 }}
+              >
+                Generated SQL:
+              </Typography>
+              <SyntaxHighlighter
+                language="sql"
+                style={docco}
+                customStyle={{
+                  backgroundColor: "rgba(0, 0, 0, 0.05)",
+                  borderRadius: 4,
+                  padding: 12,
+                }}
+              >
+                {message.content}
+              </SyntaxHighlighter>
+            </Box>
+          )}
+
+          {message.type === "results" &&
+            Array.isArray(message.content) &&
+            message.content.length > 0 && (
+              <Box>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    mb: 1,
+                  }}
+                >
+                  <Typography variant="subtitle2" sx={{ color: "text.secondary" }}>
+                    Results:
+                  </Typography>
+                  <Tooltip title="Export to Excel">
+                    <IconButton
+                      size="small"
+                      onClick={() =>
+                        handleExport(
+                          "xlsx"
+                        )
+                      }
+                      sx={{ color: "primary.main" }}
+                    >
+                      <DownloadIcon />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+
+                {/* Render chart if data is suitable */}
+                {renderVisualization(message.content)}
+
+                <Box
+                  sx={{
+                    maxHeight: "200px",
+                    overflow: "auto",
+                    backgroundColor: "rgba(0, 0, 0, 0.05)",
+                    borderRadius: 1,
+                    p: 1,
+                    border: "1px solid blue",
+                  }}
+                >
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <thead>
+                      <tr>
+                        {Object.keys(message.content[0]).map((key) => (
+                          <th
+                            key={key}
+                            style={{
+                              textAlign: "left",
+                              padding: "8px",
+                              borderBottom: "1px solid #ddd",
+                            }}
+                          >
+                            {key}
+                          </th>
                         ))}
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : (
-                <Typography color="text.secondary">No results found.</Typography>
-              )}
-              {renderVisualization(message.content)}
-            </Paper>
-          </Box>
-        );
-      case 'analysis':
-        return (
-          <Box sx={{ mb: 2 }}>
-            <Typography variant="subtitle2" color={theme.palette.text.secondary}>Analysis:</Typography>
-            <Paper sx={{ p: 2, bgcolor: theme.palette.background.paper }}>
-              <Typography className="analysis-section">{message.content}</Typography>
-            </Paper>
-          </Box>
-        );
-      case 'error':
-        return (
-          <Box sx={{ mb: 2 }}>
-            <Paper sx={{ p: 2, bgcolor: theme.palette.background.paper }}>
-              <Typography color={theme.palette.error.main}>{message.content}</Typography>
-            </Paper>
-          </Box>
-        );
-      default:
-        return null;
-    }
+                    </thead>
+                    <tbody>
+                      {message.content.map((row, i) => (
+                        <tr key={i}>
+                          {Object.values(row).map((value, j) => (
+                            <td
+                              key={j}
+                              style={{
+                                padding: "8px",
+                                borderBottom: "1px solid #ddd",
+                              }}
+                            >
+                              {value}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </Box>
+              </Box>
+            )}
+
+          {message.type === "analysis" && (
+            <Box sx={{ mt: 2 }}>
+              <Typography
+                variant="subtitle2"
+                sx={{ color: "text.secondary", mb: 1 }}
+              >
+                Explanation:
+              </Typography>
+              <Typography variant="body2">{message.content}</Typography>
+            </Box>
+          )}
+
+          {message.type === "error" && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {message.content}
+            </Alert>
+          )}
+        </Paper>
+      </Box>
+    );
   };
 
   const generateSuggestions = async (input) => {
@@ -466,7 +465,7 @@ function Chat() {
   };
 
   const handleInputChange = (event, newValue) => {
-    setQuery(newValue || event.target.value);
+    setInput(newValue || event.target.value);
     generateSuggestions(newValue || event.target.value);
   };
 
@@ -474,142 +473,153 @@ function Chat() {
   const askedQuestions = messages.filter(m => m.type === 'user').map(m => m.content);
   const contextSuggestions = VALID_QUESTIONS.filter(q => !askedQuestions.includes(q));
 
+  const handleDomainSelect = (domain) => {
+    setSelectedDomain(domain);
+    // Add a system message about the selected domain
+    setMessages([
+      {
+        type: "system",
+        content: `You are now exploring the ${domain.name} domain. Available tables: ${domain.schema.tables.join(
+          ", "
+        )}. Key metrics: ${domain.schema.kpis.join(", ")}.`,
+      },
+    ]);
+  };
+
+  const handleSend = async () => {
+    if (!input.trim()) return;
+
+    const userMessage = input;
+    setInput("");
+    setMessages((prev) => [...prev, { type: "user", content: userMessage }]);
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await axios.post(`${API_URL}/api/query`, {
+        query: userMessage,
+        domain: selectedDomain?.id,
+      });
+
+      const { sql, results, explanation, suggestions } = response.data;
+
+      setMessages((prev) => [
+        ...prev,
+        { type: "sql", content: sql },
+        { type: "results", content: results },
+        { type: "analysis", content: explanation },
+        // Add suggestions as a separate message type if desired
+        // { type: "suggestions", content: suggestions },
+      ]);
+    } catch (err) {
+      console.error("Error:", err);
+      setError(
+        err.response?.data?.detail ||
+          "An error occurred while processing your request."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  const toggleRecording = () => {
+    if (!recognitionRef.current) {
+      setError("Speech recognition is not supported in your browser.");
+      return;
+    }
+
+    if (isRecording) {
+      recognitionRef.current.stop();
+    } else {
+      recognitionRef.current.start();
+    }
+    setIsRecording(!isRecording);
+  };
+
+  const exportToExcel = (data, filename) => {
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Data");
+    XLSX.writeFile(wb, `${filename}.xlsx`);
+  };
+
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'row', gap: 2 }}>
-      {/* Suggestions Panel */}
-      <Paper sx={{ minWidth: 260, maxWidth: 300, p: 2, height: '80vh', overflowY: 'auto', mr: 2, bgcolor: theme.palette.background.paper }}>
-        <Typography variant="h6" gutterBottom>Suggestions</Typography>
-        <List>
-          {contextSuggestions.length === 0 ? (
-            <ListItem><ListItemText primary="No more suggestions" /></ListItem>
-          ) : (
-            contextSuggestions.map((suggestion, idx) => (
-              <ListItem button key={idx} onClick={() => setQuery(suggestion)}>
-                <ListItemText primary={suggestion} />
-              </ListItem>
-            ))
-          )}
-        </List>
-      </Paper>
-
-      {/* Main Chat Area */}
-      <Box sx={{ flex: 1 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Chat with Your Database
-        </Typography>
-
-        {/* Schema Information */}
-        {/* (Removed Available Tables section) */}
-        {/* Quick Queries */}
-        {/* (Removed Quick Queries section) */}
-
-        {/* Chat Interface */}
-        <Paper sx={{ p: 2, mb: 2, height: '60vh', overflow: 'auto', bgcolor: theme.palette.background.paper }}>
-          {messages.map((message, index) => (
-            <div key={index}>{renderMessage(message)}</div>
-          ))}
-          <div ref={messagesEndRef} />
-        </Paper>
-
-{/* Input Area */}
-<Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', mt: 2, width: '100%' }}>
-  <Autocomplete
-    freeSolo
-    options={suggestions}
-    inputValue={query}
-    onInputChange={handleInputChange}
-    sx={{ flex: 1 }}
-    renderInput={(params) => (
-      <TextField
-        {...params}
-        fullWidth
-        variant="outlined"
-        placeholder="Ask a question about your data..."
-        disabled={loading}
-        multiline
-        minRows={3}
-        maxRows={6}
-        sx={{
-          width: '100%',
-          '& .MuiInputBase-root': {
-            alignItems: 'flex-start',
-            py: 2,
-          },
-          '& .MuiInputBase-input': {
-            fontSize: '1.25rem',
-            minHeight: '96px',
-          },
-        }}
-      />
-    )}
-  />
-
-  <VoiceButton 
-    speechKey={SPEECH_KEY}
-    speechRegion={SPEECH_REGION}
-    onTranscription={(text) => setQuery(text)}
-  />
-
-  <IconButton 
-    color="primary" 
-    onClick={handleQuery}
-    disabled={loading || !query.trim()}
-    sx={{ mt: 1.5 }}
-  >
-    {loading ? <CircularProgress size={24} /> : <SendIcon />}
-  </IconButton>
-
-  <IconButton
-    color="primary"
-    onClick={(e) => setAnchorEl(e.currentTarget)}
-    sx={{ mt: 1.5 }}
-  >
-    <SaveIcon />
-  </IconButton>
-</Box>
-
-
-        {/* Export Menu */}
-        <Menu
-          anchorEl={anchorEl}
-          open={Boolean(anchorEl)}
-          onClose={() => setAnchorEl(null)}
-        >
-          <MenuItem onClick={() => { handleExport('csv'); setAnchorEl(null); }}>
-            Export as CSV
-          </MenuItem>
-          <MenuItem onClick={() => { handleExport('json'); setAnchorEl(null); }}>
-            Export as JSON
-          </MenuItem>
-          <MenuItem onClick={() => { handleExport('excel'); setAnchorEl(null); }}>
-            Export as Excel
-          </MenuItem>
-        </Menu>
-
-        {/* Visualization Controls */}
-        {messages.some(m => m.type === 'results') && (
-          <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
-            <IconButton 
-              color={visualizationType === 'bar' ? theme.palette.primary.main : 'default'}
-              onClick={() => setVisualizationType('bar')}
-            >
-              <BarChartIcon />
-            </IconButton>
-            <IconButton 
-              color={visualizationType === 'pie' ? theme.palette.primary.main : 'default'}
-              onClick={() => setVisualizationType('pie')}
-            >
-              <PieChartIcon />
-            </IconButton>
-            <IconButton 
-              color={visualizationType === 'line' ? theme.palette.primary.main : 'default'}
-              onClick={() => setVisualizationType('line')}
-            >
-              <LineChartIcon />
-            </IconButton>
-          </Box>
+    <Box sx={{ height: "100vh", display: "flex", flexDirection: "column" }}>
+      <Box sx={{ flexGrow: 1, overflow: "auto", p: 2 }}>
+        {!selectedDomain ? (
+          <DomainSelector onSelectDomain={handleDomainSelect} />
+        ) : (
+          <>
+            {messages.map((message, index) => renderMessage(message, index))}
+            <div ref={messagesEndRef} />
+          </>
         )}
       </Box>
+
+      <Box
+        sx={{
+          p: 2,
+          backgroundColor: "background.paper",
+          borderTop: "1px solid",
+          borderColor: "divider",
+        }}
+      >
+        <Box sx={{ display: "flex", gap: 1 }}>
+          <TextField
+            fullWidth
+            variant="outlined"
+            placeholder="Ask a question about your data..."
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyPress={handleKeyPress}
+            disabled={isLoading}
+            multiline
+            maxRows={4}
+            sx={{
+              "& .MuiOutlinedInput-root": {
+                borderRadius: 2,
+              },
+            }}
+          />
+          <Tooltip title={isRecording ? "Stop Recording" : "Start Recording"}>
+            <IconButton
+              onClick={toggleRecording}
+              color={isRecording ? "error" : "primary"}
+              disabled={isLoading}
+            >
+              {isRecording ? <MicOffIcon /> : <MicIcon />}
+            </IconButton>
+          </Tooltip>
+          <Button
+            variant="contained"
+            onClick={handleSend}
+            disabled={isLoading || !input.trim()}
+            sx={{
+              borderRadius: 2,
+              minWidth: "100px",
+            }}
+          >
+            {isLoading ? <CircularProgress size={24} /> : <SendIcon />}
+          </Button>
+        </Box>
+      </Box>
+
+      <Snackbar
+        open={!!error}
+        autoHideDuration={6000}
+        onClose={() => setError(null)}
+      >
+        <Alert severity="error" onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

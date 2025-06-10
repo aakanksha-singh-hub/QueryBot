@@ -17,7 +17,6 @@ import logging
 from datetime import datetime
 import io
 import csv
-import time
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 # Load environment variables
@@ -40,9 +39,13 @@ app.add_middleware(
 )
 
 # Database setup
+# Database setup
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise ValueError("DATABASE_URL not set")
+print("🔥 Loaded DATABASE_URL:", DATABASE_URL) # <--- ADD THIS LINE
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(bind=engine)
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)
 
@@ -98,8 +101,7 @@ def format_schema_for_prompt(schema_info):
         lines.append("")
     return "\n".join(lines)
 
-# Utility: Generate SQL from natural query with retry logic
-@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
+# Utility: Generate SQL from natural query
 def generate_sql(natural_query: str, schema_info: dict) -> Dict[str, str]:
     schema_str = format_schema_for_prompt(schema_info)
     prompt = f"""
@@ -114,20 +116,15 @@ Format your response as JSON like this:
 }}
 """
     try:
-        response = openai.ChatCompletion.create(
-            engine="gpt-4",
+        # Use get_completion to handle OpenAI call, retry, and markdown stripping
+        message = get_completion(
             messages=[
                 {"role": "system", "content": "You are an expert SQL assistant."},
                 {"role": "user", "content": prompt}
-            ],
-            temperature=0.3
+            ]
         )
-        message = response.choices[0].message.content
-        print("🧠 RAW OPENAI MESSAGE:", message)
-        
-        # Clean the message in case it contains markdown code blocks
-        message = message.replace("```json", "").replace("```", "").strip()
-        
+        print("🧠 RAW OPENAI MESSAGE (after cleaning in get_completion):", message)
+
         try:
             parsed = json.loads(message)
             print("🔍 PARSED:", parsed)
@@ -139,14 +136,14 @@ Format your response as JSON like this:
             }
         except json.JSONDecodeError as e:
             print("❌ JSON Parse Error:", e)
-            print("Raw message that failed to parse:", message)
+            print("Raw message that failed to parse (after cleaning):", message)
             # Return a default response if JSON parsing fails
             return {
                 "sql_query": "SELECT TOP 5 * FROM employees ORDER BY salary DESC",
                 "explanation": "Showing top 5 highest paid employees"
             }
     except Exception as e:
-        print("❌ OpenAI API Error:", e)
+        print("❌ OpenAI API Error or other error:", e)
         raise HTTPException(status_code=500, detail=str(e))
 
 # Utility: Execute SQL query
@@ -197,7 +194,6 @@ async def process_query(data: QueryInput):
         }
 
 @api_router.post("/suggestions")
-@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
 def suggest_followups(request: SuggestionRequest):
     prompt = f"""
 Based on the user's question: "{request.question}",
@@ -266,4 +262,136 @@ def transcribe_audio():
     return {"message": "Audio transcription endpoint"}
 
 # Include the API router
-app.include_router(api_router) 
+app.include_router(api_router)
+
+DOMAIN_SCHEMAS = {
+    "sales": {
+        "tables": {
+            "sales": ["sale_id", "project_id", "amount", "sale_date", "payment_status"],
+            "projects": ["project_id", "project_name", "start_date", "end_date", "budget", "status", "client_name"]
+        },
+        "kpis": ["Total Revenue", "Sales per Project", "Average Sale Amount"],
+        "system_prompt": """You are a sales analytics expert. You help users analyze sales data and project-related sales performance.
+        Focus on metrics like total revenue, sales per project, and average sale amounts.
+        
+        Example queries and their SQL:
+        1. "Show me total sales amount for each project"
+           SELECT p.project_name, SUM(s.amount) AS total_sales_amount
+           FROM sales s
+           JOIN projects p ON s.project_id = p.project_id
+           GROUP BY p.project_name
+           ORDER BY total_sales_amount DESC;
+        
+        2. "What was the total revenue in March?"
+           SELECT SUM(amount) AS total_revenue
+           FROM sales
+           WHERE MONTH(sale_date) = 3 AND YEAR(sale_date) = YEAR(GETDATE());
+        
+        3. "Show me sales by payment status"
+           SELECT payment_status, COUNT(sale_id) AS number_of_sales, SUM(amount) AS total_amount
+           FROM sales
+           GROUP BY payment_status;
+        """,
+        "common_terms": {
+            "total_revenue": "SUM(amount)",
+            "sales_amount": "amount",
+            "sales_date": "sale_date",
+            "payment_status": "payment_status"
+        }
+    },
+    "support": {
+        "tables": {
+            "customer_feedback": ["feedback_id", "project_id", "rating", "feedback_text", "feedback_date"],
+            "projects": ["project_id", "project_name", "start_date", "end_date", "budget", "status", "client_name"]
+        },
+        "kpis": ["Average Rating", "Feedback Volume", "Feedback per Project"],
+        "system_prompt": """You are a customer support and feedback analytics expert. You help users analyze customer feedback and relate it to projects.
+        Focus on metrics like average ratings, volume of feedback, and specific feedback texts.
+        
+        Example queries and their SQL:
+        1. "Show me the average rating for each project"
+           SELECT p.project_name, AVG(cf.rating) AS average_rating
+           FROM customer_feedback cf
+           JOIN projects p ON cf.project_id = p.project_id
+           GROUP BY p.project_name
+           ORDER BY average_rating DESC;
+        
+        2. "How many feedback entries were received last month?"
+           SELECT COUNT(feedback_id) AS total_feedback_last_month
+           FROM customer_feedback
+           WHERE MONTH(feedback_date) = MONTH(DATEADD(month, -1, GETDATE()))
+           AND YEAR(feedback_date) = YEAR(DATEADD(month, -1, GETDATE()));
+        
+        3. "Show me all feedback for projects with low ratings (e.g., less than 3)"
+           SELECT cf.feedback_text, cf.rating, p.project_name
+           FROM customer_feedback cf
+           JOIN projects p ON cf.project_id = p.project_id
+           WHERE cf.rating < 3;
+        """,
+        "common_terms": {
+            "average_rating": "AVG(rating)",
+            "feedback_volume": "COUNT(feedback_id)",
+            "feedback_date": "feedback_date"
+        }
+    },
+    "employee": {
+        "tables": {
+            "employees": ["id", "name", "department", "salary", "doj", "manager_id", "performance_score", "skills"],
+            "projects": ["project_id", "project_name", "start_date", "end_date", "budget", "status", "client_name"],
+            "employee_projects": ["employee_id", "project_id", "role", "hours_worked", "contribution_percentage"]
+        },
+        "kpis": ["Employee Salary", "Department Performance", "Hours Worked on Projects", "Project Contribution"],
+        "system_prompt": """You are an employee and project performance analytics expert. You help users analyze employee data, project involvement, and productivity metrics.
+        Focus on metrics like employee salaries, department performance, hours worked on projects, and contribution percentages.
+        
+        Example queries and their SQL:
+        1. "What is the average salary by department?"
+           SELECT department, AVG(salary) AS average_salary FROM employees GROUP BY department;
+        
+        2. "Show me employees working on 'Project X' and their hours"
+           SELECT e.name, ep.hours_worked
+           FROM employees e
+           JOIN employee_projects ep ON e.id = ep.employee_id
+           JOIN projects p ON ep.project_id = p.project_id
+           WHERE p.project_name = 'Project X';
+        
+        3. "Who are the top 5 highest paid employees?"
+           SELECT TOP 5 name, salary, department FROM employees ORDER BY salary DESC;
+        
+        4. "List employees who started in the last year"
+           SELECT id, name, doj, department
+           FROM employees
+           WHERE doj >= DATEADD(year, -1, GETDATE());
+        """,
+        "common_terms": {
+            "average_salary": "AVG(salary)",
+            "total_hours_worked": "SUM(hours_worked)",
+            "department": "department",
+            "salary": "salary"
+        }
+    }
+}
+
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
+def get_completion(messages):
+    try:
+        response = openai.ChatCompletion.create(
+            engine="gpt-4",
+            messages=messages,
+            temperature=0.7,
+            max_tokens=800,
+            top_p=0.95,
+            frequency_penalty=0,
+            presence_penalty=0,
+            stop=None
+        )
+        message_content = response.choices[0].message.content
+        # Robustly clean markdown code blocks from the message content
+        if message_content.startswith('```json'):
+            message_content = message_content[len('```json'):]
+        if message_content.endswith('```'):
+            message_content = message_content[:-len('```')]
+        return message_content.strip()
+    except Exception as e:
+        print(f"Error in OpenAI API call: {str(e)}")
+        raise 
