@@ -9,3 +9,4 @@ plotly==5.22.0
 sqlalchemy==2.0.27
 pydantic==2.6.1
 tenacity==8.2.3
+azure-cognitiveservices-speech==1.37.0

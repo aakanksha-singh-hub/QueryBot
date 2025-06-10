@@ -18,6 +18,7 @@ from datetime import datetime
 import io
 import csv
 from tenacity import retry, stop_after_attempt, wait_exponential
+import azure.cognitiveservices.speech as speechsdk
 
 # Load environment variables
 load_dotenv()
@@ -64,6 +65,126 @@ openai.api_key = AZURE_OPENAI_API_KEY
 openai.api_base = AZURE_OPENAI_ENDPOINT
 openai.api_type = "azure"
 openai.api_version = "2023-05-15"
+
+# Azure Speech Service setup
+AZURE_SPEECH_KEY = os.getenv("AZURE_SPEECH_KEY")
+AZURE_SPEECH_REGION = os.getenv("AZURE_SPEECH_REGION")
+
+if not AZURE_SPEECH_KEY or not AZURE_SPEECH_REGION:
+    raise ValueError("Azure Speech Service credentials are not set")
+
+speech_config = speechsdk.SpeechConfig(subscription=AZURE_SPEECH_KEY, region=AZURE_SPEECH_REGION)
+speech_config.speech_synthesis_voice_name='en-US-JennyNeural'
+
+# Domain schemas for suggestions
+DOMAIN_SCHEMAS = {
+    "employees": {
+        "tables": {
+            "employees": {
+                "id": "int",
+                "name": "varchar",
+                "department": "varchar",
+                "salary": "decimal",
+                "hire_date": "date",
+                "manager_id": "int"
+            }
+        },
+        "kpis": ["salary", "department", "tenure"],
+        "system_prompt": """
+        You are an expert data analyst focusing on employee data.
+        Example queries and their SQL:
+        1. Show me the top 5 highest paid employees
+        SELECT TOP 5 name, salary FROM employees ORDER BY salary DESC
+        2. What is the average salary by department?
+        SELECT department, AVG(salary) as avg_salary FROM employees GROUP BY department
+        3. Who are the managers and how many people report to them?
+        SELECT m.name as manager_name, COUNT(e.id) as direct_reports 
+        FROM employees e JOIN employees m ON e.manager_id = m.id 
+        GROUP BY m.name
+        """
+    },
+    "projects": {
+        "tables": {
+            "projects": {
+                "id": "int",
+                "name": "varchar",
+                "start_date": "date",
+                "end_date": "date",
+                "status": "varchar",
+                "budget": "decimal"
+            },
+            "employee_projects": {
+                "employee_id": "int",
+                "project_id": "int",
+                "role": "varchar",
+                "hours_worked": "decimal"
+            }
+        },
+        "kpis": ["budget", "status", "hours_worked"],
+        "system_prompt": """
+        You are an expert data analyst focusing on project management data.
+        Example queries and their SQL:
+        1. What are the active projects and their budgets?
+        SELECT name, budget FROM projects WHERE status = 'active'
+        2. Which employees are working the most hours on projects?
+        SELECT e.name, SUM(ep.hours_worked) as total_hours 
+        FROM employee_projects ep JOIN employees e ON ep.employee_id = e.id 
+        GROUP BY e.name ORDER BY total_hours DESC
+        3. What is the average project budget by status?
+        SELECT status, AVG(budget) as avg_budget FROM projects GROUP BY status
+        """
+    },
+    "sales": {
+        "tables": {
+            "sales": {
+                "id": "int",
+                "product_id": "int",
+                "customer_id": "int",
+                "sale_date": "date",
+                "amount": "decimal",
+                "quantity": "int"
+            }
+        },
+        "kpis": ["amount", "quantity", "sale_date"],
+        "system_prompt": """
+        You are an expert data analyst focusing on sales data.
+        Example queries and their SQL:
+        1. What are the total sales by month?
+        SELECT MONTH(sale_date) as month, SUM(amount) as total_sales 
+        FROM sales GROUP BY MONTH(sale_date) ORDER BY month
+        2. Which products have the highest average sale amount?
+        SELECT product_id, AVG(amount) as avg_sale_amount 
+        FROM sales GROUP BY product_id ORDER BY avg_sale_amount DESC
+        3. What is the total quantity sold per product?
+        SELECT product_id, SUM(quantity) as total_quantity 
+        FROM sales GROUP BY product_id ORDER BY total_quantity DESC
+        """
+    },
+    "customer_feedback": {
+        "tables": {
+            "customer_feedback": {
+                "id": "int",
+                "customer_id": "int",
+                "rating": "int",
+                "comment": "text",
+                "feedback_date": "date"
+            }
+        },
+        "kpis": ["rating", "feedback_date"],
+        "system_prompt": """
+        You are an expert data analyst focusing on customer feedback.
+        Example queries and their SQL:
+        1. What is the average rating over time?
+        SELECT feedback_date, AVG(rating) as avg_rating 
+        FROM customer_feedback GROUP BY feedback_date ORDER BY feedback_date
+        2. How many feedback entries do we have per rating?
+        SELECT rating, COUNT(*) as count FROM customer_feedback GROUP BY rating
+        3. What are the most recent feedback comments?
+        SELECT TOP 5 comment, rating, feedback_date 
+        FROM customer_feedback ORDER BY feedback_date DESC
+        """
+    }
+}
 
 # Models
 class QueryInput(BaseModel):
@@ -121,7 +242,6 @@ Format your response as JSON like this:
 }}
 """
     try:
-        # Use get_completion to handle OpenAI call, retry, and markdown stripping
         message = get_completion(
             messages=[
                 {"role": "system", "content": "You are an expert SQL assistant."},
@@ -142,7 +262,6 @@ Format your response as JSON like this:
         except json.JSONDecodeError as e:
             print("❌ JSON Parse Error:", e)
             print("Raw message that failed to parse (after cleaning):", message)
-            # Return a default response if JSON parsing fails
             return {
                 "sql_query": "SELECT TOP 5 * FROM employees ORDER BY salary DESC",
                 "explanation": "Showing top 5 highest paid employees"
@@ -202,7 +321,6 @@ def suggest_followups(request: SuggestionRequest):
     domain_name = request.domain
 
     if not domain_name or domain_name not in DOMAIN_SCHEMAS:
-        # If no domain is provided or invalid, suggest general questions
         prompt = """
         Suggest 3 general analytical questions about a database.
         Format as JSON:
@@ -233,20 +351,20 @@ def suggest_followups(request: SuggestionRequest):
             messages=[
                 {"role": "system", "content": "You are an expert data analyst."},
                 {"role": "user", "content": prompt}
-            ],
-            temperature=0.7, # Increase temperature for more diverse suggestions
-            max_tokens=200
+            ]
         )
-        message_content = response.choices[0].message.content
-        suggestions = json.loads(message_content).get("suggestions", [])
-        return {"suggestions": suggestions}
+        suggestions = json.loads(response.choices[0].message.content)
+        return suggestions
     except Exception as e:
-        print(f"Error generating suggestions: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        print("❌ Error generating suggestions:", e)
+        return {"suggestions": ["Show me the top 5 employees by salary", "What are our most active projects?", "List recent customer feedback"]}
 
 @api_router.post("/export")
 def export_csv(request: ExportRequest):
     try:
+        if not request.data:
+            raise HTTPException(status_code=400, detail="No data provided")
+
         output = io.StringIO()
         writer = csv.DictWriter(output, fieldnames=request.data[0].keys())
         writer.writeheader()
@@ -260,6 +378,30 @@ def export_csv(request: ExportRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@api_router.post("/synthesize_speech")
+async def synthesize_speech(text_to_speak: str):
+    try:
+        # Create a speech synthesizer
+        speech_synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config)
+
+        # Synthesize text to speech
+        result = speech_synthesizer.speak_text_async(text_to_speak).get()
+
+        if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
+            # Get the audio data
+            audio_data = result.audio_data
+
+            # Return the audio data as a streaming response
+            return StreamingResponse(
+                iter([audio_data]),
+                media_type="audio/wav",
+                headers={"Content-Disposition": "attachment; filename=speech.wav"}
+            )
+        else:
+            raise HTTPException(status_code=500, detail="Speech synthesis failed")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @api_router.get("/ping")
 def ping():
     return {"status": "ok", "message": "pong"}
@@ -270,133 +412,19 @@ def root():
 
 @app.get("/schema")
 def get_schema(db: Session = Depends(get_db)):
-    try:
-        schema_info = get_schema_info(db)
-        return {"schema": schema_info}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    schema_info = get_schema_info(db)
+    return {"schema": schema_info}
 
 @app.get("/health")
 def health():
     return {
         "status": "healthy",
-        "timestamp": datetime.now().isoformat()
+        "timestamp": datetime.utcnow().isoformat()
     }
 
 @app.post("/transcribe")
 def transcribe_audio():
     return {"message": "Audio transcription endpoint"}
-
-# Include the API router
-app.include_router(api_router)
-
-DOMAIN_SCHEMAS = {
-    "sales": {
-        "tables": {
-            "sales": ["sale_id", "project_id", "amount", "sale_date", "payment_status"],
-            "projects": ["project_id", "project_name", "start_date", "end_date", "budget", "status", "client_name"]
-        },
-        "kpis": ["Total Revenue", "Sales per Project", "Average Sale Amount"],
-        "system_prompt": """You are a sales analytics expert. You help users analyze sales data and project-related sales performance.
-        Focus on metrics like total revenue, sales per project, and average sale amounts.
-
-        Example queries and their SQL:
-        1. "Show me total sales amount for each project"
-           SELECT p.project_name, SUM(s.amount) AS total_sales_amount
-           FROM sales s
-           JOIN projects p ON s.project_id = p.project_id
-           GROUP BY p.project_name
-           ORDER BY total_sales_amount DESC;
-
-        2. "What was the total revenue in March?"
-           SELECT SUM(amount) AS total_revenue
-           FROM sales
-           WHERE MONTH(sale_date) = 3 AND YEAR(sale_date) = YEAR(GETDATE());
-
-        3. "Show me sales by payment status"
-           SELECT payment_status, COUNT(sale_id) AS number_of_sales, SUM(amount) AS total_amount
-           FROM sales
-           GROUP BY payment_status;
-        """,
-        "common_terms": {
-            "total_revenue": "SUM(amount)",
-            "sales_amount": "amount",
-            "sales_date": "sale_date",
-            "payment_status": "payment_status"
-        }
-    },
-    "support": {
-        "tables": {
-            "customer_feedback": ["feedback_id", "project_id", "rating", "feedback_text", "feedback_date"],
-            "projects": ["project_id", "project_name", "start_date", "end_date", "budget", "status", "client_name"]
-        },
-        "kpis": ["Average Rating", "Feedback Volume", "Feedback per Project"],
-        "system_prompt": """You are a customer support and feedback analytics expert. You help users analyze customer feedback and relate it to projects.
-        Focus on metrics like average ratings, volume of feedback, and specific feedback texts.
-
-        Example queries and their SQL:
-        1. "Show me the average rating for each project"
-           SELECT p.project_name, AVG(cf.rating) AS average_rating
-           FROM customer_feedback cf
-           JOIN projects p ON cf.project_id = p.project_id
-           GROUP BY p.project_name
-           ORDER BY average_rating DESC;
-
-        2. "How many feedback entries were received last month?"
-           SELECT COUNT(feedback_id) AS total_feedback_last_month
-           FROM customer_feedback
-           WHERE MONTH(feedback_date) = MONTH(DATEADD(month, -1, GETDATE()))
-           AND YEAR(feedback_date) = YEAR(DATEADD(month, -1, GETDATE()));
-
-        3. "Show me all feedback for projects with low ratings (e.g., less than 3)"
-           SELECT cf.feedback_text, cf.rating, p.project_name
-           FROM customer_feedback cf
-           JOIN projects p ON cf.project_id = p.project_id
-           WHERE cf.rating < 3;
-        """,
-        "common_terms": {
-            "average_rating": "AVG(rating)",
-            "feedback_volume": "COUNT(feedback_id)",
-            "feedback_date": "feedback_date"
-        }
-    },
-    "employee": {
-        "tables": {
-            "employees": ["id", "name", "department", "salary", "doj", "manager_id", "performance_score", "skills"],
-            "projects": ["project_id", "project_name", "start_date", "end_date", "budget", "status", "client_name"],
-            "employee_projects": ["employee_id", "project_id", "role", "hours_worked", "contribution_percentage"]
-        },
-        "kpis": ["Employee Salary", "Department Performance", "Hours Worked on Projects", "Project Contribution"],
-        "system_prompt": """You are an employee and project performance analytics expert. You help users analyze employee data, project involvement, and productivity metrics.
-        Focus on metrics like employee salaries, department performance, hours worked on projects, and contribution percentages.
-
-        Example queries and their SQL:
-        1. "What is the average salary by department?"
-           SELECT department, AVG(salary) AS average_salary FROM employees GROUP BY department;
-
-        2. "Show me employees working on 'Project X' and their hours"
-           SELECT e.name, ep.hours_worked
-           FROM employees e
-           JOIN employee_projects ep ON e.id = ep.employee_id
-           JOIN projects p ON ep.project_id = p.project_id
-           WHERE p.project_name = 'Project X';
-
-        3. "Who are the top 5 highest paid employees?"
-           SELECT TOP 5 name, salary, department FROM employees ORDER BY salary DESC;
-
-        4. "List employees who started in the last year"
-           SELECT id, name, doj, department
-           FROM employees
-           WHERE doj >= DATEADD(year, -1, GETDATE());
-        """,
-        "common_terms": {
-            "average_salary": "AVG(salary)",
-            "total_hours_worked": "SUM(hours_worked)",
-            "department": "department",
-            "salary": "salary"
-        }
-    }
-}
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
 def get_completion(messages):
@@ -405,19 +433,20 @@ def get_completion(messages):
             engine="gpt-4",
             messages=messages,
             temperature=0.7,
-            max_tokens=800,
-            top_p=0.95,
-            frequency_penalty=0,
-            presence_penalty=0,
-            stop=None
+            max_tokens=800
         )
-        message_content = response.choices[0].message.content
-        # Robustly clean markdown code blocks from the message content
-        if message_content.startswith('```json'):
-            message_content = message_content[len('```json'):]
-        if message_content.endswith('```'):
-            message_content = message_content[:-len('```')]
-        return message_content.strip()
+        content = response.choices[0].message.content.strip()
+        
+        # Strip markdown code blocks if present
+        if content.startswith("```") and content.endswith("```"):
+            content = content[3:-3].strip()
+            if content.startswith("json"):
+                content = content[4:].strip()
+        
+        return content
     except Exception as e:
-        print(f"Error in OpenAI API call: {str(e)}")
+        print(f"❌ Error in get_completion: {e}")
         raise
+
+# Include the API router in the main app (moved to end of file)
+app.include_router(api_router)
