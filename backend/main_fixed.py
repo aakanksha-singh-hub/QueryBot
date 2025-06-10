@@ -17,8 +17,6 @@ import logging
 from datetime import datetime
 import io
 import csv
-import time
-from tenacity import retry, stop_after_attempt, wait_exponential
 
 # Load environment variables
 load_dotenv()
@@ -98,8 +96,7 @@ def format_schema_for_prompt(schema_info):
         lines.append("")
     return "\n".join(lines)
 
-# Utility: Generate SQL from natural query with retry logic
-@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
+# Utility: Generate SQL from natural query
 def generate_sql(natural_query: str, schema_info: dict) -> Dict[str, str]:
     schema_str = format_schema_for_prompt(schema_info)
     prompt = f"""
@@ -113,41 +110,25 @@ Format your response as JSON like this:
     "explanation": "..."
 }}
 """
-    try:
-        response = openai.ChatCompletion.create(
-            engine="gpt-4",
-            messages=[
-                {"role": "system", "content": "You are an expert SQL assistant."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.3
-        )
-        message = response.choices[0].message.content
-        print("🧠 RAW OPENAI MESSAGE:", message)
-        
-        # Clean the message in case it contains markdown code blocks
-        message = message.replace("```json", "").replace("```", "").strip()
-        
-        try:
-            parsed = json.loads(message)
-            print("🔍 PARSED:", parsed)
-            print("TYPE:", type(parsed))
+    response = openai.ChatCompletion.create(
+        engine="gpt-4",
+        messages=[
+            {"role": "system", "content": "You are an expert SQL assistant."},
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0.3
+    )
+    message = response.choices[0].message.content
+    print("🧠 RAW OPENAI MESSAGE:", message)
+    
+    parsed = json.loads(message)
+    print("🔍 PARSED:", parsed)
+    print("TYPE:", type(parsed))
 
-            return {
-                "sql_query": parsed.get("sql_query", "").strip(),
-                "explanation": parsed.get("explanation", "").strip()
-            }
-        except json.JSONDecodeError as e:
-            print("❌ JSON Parse Error:", e)
-            print("Raw message that failed to parse:", message)
-            # Return a default response if JSON parsing fails
-            return {
-                "sql_query": "SELECT TOP 5 * FROM employees ORDER BY salary DESC",
-                "explanation": "Showing top 5 highest paid employees"
-            }
-    except Exception as e:
-        print("❌ OpenAI API Error:", e)
-        raise HTTPException(status_code=500, detail=str(e))
+    return {
+        "sql_query": parsed.get("sql_query", "").strip(),
+        "explanation": parsed.get("explanation", "").strip()
+    }
 
 # Utility: Execute SQL query
 def execute_query(sql_query: str) -> List[Dict[str, Any]]:
@@ -197,7 +178,6 @@ async def process_query(data: QueryInput):
         }
 
 @api_router.post("/suggestions")
-@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
 def suggest_followups(request: SuggestionRequest):
     prompt = f"""
 Based on the user's question: "{request.question}",

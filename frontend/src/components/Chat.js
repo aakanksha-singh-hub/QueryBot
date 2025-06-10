@@ -42,7 +42,11 @@ import {
   Legend,
   ResponsiveContainer
 } from 'recharts';
+import VoiceInput from './VoiceInput';
+import VoiceButton from './VoiceButton';
 
+const SPEECH_KEY = process.env.REACT_APP_SPEECH_KEY;
+const SPEECH_REGION = process.env.REACT_APP_SPEECH_REGION;
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
 const VALID_QUESTIONS = [
@@ -453,7 +457,7 @@ function Chat() {
       return;
     }
     try {
-      const response = await axios.post(`${API_URL}/api/suggestions`, { query: input });
+      const response = await axios.post(`${API_URL}/api/suggestions`, { question: input });
       setSuggestions(response.data.suggestions);
     } catch (error) {
       console.error('Error fetching suggestions:', error);
@@ -538,6 +542,12 @@ function Chat() {
         }}
       />
     )}
+  />
+
+  <VoiceButton 
+    speechKey={SPEECH_KEY}
+    speechRegion={SPEECH_REGION}
+    onTranscription={(text) => setQuery(text)}
   />
 
   <IconButton 
