@@ -37,8 +37,8 @@ import {
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import LightModeOutlinedIcon from "@mui/icons-material/LightModeOutlined";
 import DarkModeOutlinedIcon from "@mui/icons-material/DarkModeOutlined";
-import "@fontsource/geist-sans"; // Import base weight
-import "@fontsource/geist-mono"; // Import base weight
+import "@fontsource/inter/400.css";
+import "@fontsource/inter/700.css";
 import Chat from "./components/Chat";
 import AboutPage from "./components/AboutPage";
 import ConnectPage from "./components/ConnectPage";
@@ -104,7 +104,7 @@ const getDesignTokens = (mode) => ({
   },
   typography: {
     fontFamily:
-      '"Geist Sans", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
+      '"Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
     h3: {
       fontWeight: 700,
       letterSpacing: "-0.02em",
@@ -188,12 +188,12 @@ const getDesignTokens = (mode) => ({
     MuiCssBaseline: {
       styleOverrides: {
         html: {
-          fontFamily: '"Geist Sans", system-ui, -apple-system, sans-serif',
+          fontFamily: '"Inter", system-ui, -apple-system, sans-serif',
           WebkitFontSmoothing: "antialiased",
           MozOsxFontSmoothing: "grayscale",
         },
         code: {
-          fontFamily: '"Geist Mono", monospace',
+          fontFamily: '"Inter", monospace',
         },
       },
     },
@@ -845,7 +845,7 @@ const HeroSection = () => {
                   bgcolor: isDark ? "rgba(17, 24, 39, 0.8)" : "#F3F4F6",
                   borderRadius: 1,
                   p: 3,
-                  fontFamily: '"Geist Mono", monospace',
+                  fontFamily: '"Inter", monospace',
                   fontSize: "0.9rem",
                   mb: 3,
                   color: isDark ? "#D1D5DB" : "#374151",
