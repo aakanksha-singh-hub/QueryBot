@@ -1466,7 +1466,7 @@ const Footer = () => {
         >
           ♥
         </Box>
-        by
+        
         <Box
           component="a"
           href="https://github.com/aakanksha-singh-hub"
@@ -1480,7 +1480,7 @@ const Footer = () => {
             },
           }}
         >
-          Aakanksha Singh
+          
         </Box>
       </Typography>
     </Box>

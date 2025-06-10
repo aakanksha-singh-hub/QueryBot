@@ -615,42 +615,19 @@ class DatabaseChatbot:
         except Exception as e:
             raise Exception(f"Error generating SQL query: {str(e)}")
 
-    def execute_query(self, query: str) -> pd.DataFrame:
-        """Execute SQL query and return results as DataFrame."""
+    def execute_query(sql_query: str) -> List[Dict[str, Any]]:
         try:
-            # Log the SQL query for debugging
-            print("\n🛠 Executing SQL:", query)
-            
-            cursor = self.conn.cursor()
-            cursor.execute(query)
-            
-            # Get column names from cursor description
-            columns = [column[0] for column in cursor.description]
-            
-            # Fetch all results
-            results = cursor.fetchall()
-            
-            # Validate column count
-            if results and len(results[0]) != len(columns):
-                raise ValueError(f"Column count mismatch: got {len(results[0])} columns, expected {len(columns)}")
-            
-            # Create DataFrame with explicit column mapping
-            if results:
-                # Convert results to list of lists
-                data = [list(row) for row in results]
-                # Create DataFrame with explicit columns
-                df = pd.DataFrame(data, columns=columns)
-            else:
-                # Create empty DataFrame with correct columns
-                df = pd.DataFrame(columns=columns)
-            
-            # Close cursor
-            cursor.close()
-            
-            return df
-            
+            with engine.connect() as conn:
+                result = conn.execute(text(sql_query))
+                columns = result.keys()
+                rows = result.fetchall()
+                print(f"📊 Columns: {columns}")
+                for idx, row in enumerate(rows):
+                    print(f"Row {idx}: {row}")
+                return [{col: val for col, val in zip(columns, row)} for row in rows]
         except Exception as e:
-            raise Exception(f"Error executing query: {str(e)}")
+            print("❌ Exception in execute_query:", e)
+            raise HTTPException(status_code=400, detail=str(e))
 
     def analyze_data(self, df: pd.DataFrame) -> str:
         """Analyze data and return focused, actionable insights."""

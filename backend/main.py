@@ -2,11 +2,11 @@ import openai
 print("OPENAI VERSION:", openai.__version__)
 print("OPENAI FILE:", openai.__file__)
 
-from fastapi import FastAPI, APIRouter, HTTPException
+from fastapi import FastAPI, APIRouter, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, Session
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 import os
@@ -39,15 +39,20 @@ app.add_middleware(
 )
 
 # Database setup
-# Database setup
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise ValueError("DATABASE_URL not set")
-print("🔥 Loaded DATABASE_URL:", DATABASE_URL) # <--- ADD THIS LINE
-engine = create_engine(DATABASE_URL)
-SessionLocal = sessionmaker(bind=engine)
-engine = create_engine(DATABASE_URL)
-SessionLocal = sessionmaker(bind=engine)
+print("🔥 Loaded DATABASE_URL:", DATABASE_URL)
+engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# Dependency to get DB session
+async def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 # Azure OpenAI setup
 AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
@@ -66,30 +71,30 @@ class QueryInput(BaseModel):
     question: Optional[str] = None
 
 class SuggestionRequest(BaseModel):
-    question: str
+    domain: Optional[str] = None
 
 class ExportRequest(BaseModel):
     data: List[Dict[str, Any]]
 
 # Utility: Get schema
-def get_schema_info():
-    with engine.connect() as conn:
-        tables_query = text("""
-        SELECT table_name 
-        FROM information_schema.tables 
-        WHERE table_schema = 'dbo'
-    """)
-        tables = [row[0] for row in conn.execute(tables_query)]
-        schema = {}
-        for table in tables:
-            columns_query = text(f"""
-                SELECT column_name, data_type 
-                FROM information_schema.columns 
-                WHERE table_name = '{table}'
-            """)
-            columns = [{"name": row[0], "type": row[1]} for row in conn.execute(columns_query)]
-            schema[table] = columns
-        return schema
+def get_schema_info(db: Session) -> Dict[str, Any]:
+    schema = {}
+    tables_query = text("""
+    SELECT table_name
+    FROM information_schema.tables
+    WHERE table_schema = 'dbo'
+""")
+    tables = [row[0] for row in db.execute(tables_query)]
+
+    for table in tables:
+        columns_query = text(f"""
+            SELECT column_name, data_type
+            FROM information_schema.columns
+            WHERE table_name = '{table}'
+        """)
+        columns = [{"name": row[0], "type": row[1]} for row in db.execute(columns_query)]
+        schema[table] = columns
+    return schema
 
 # Utility: Format schema
 def format_schema_for_prompt(schema_info):
@@ -147,16 +152,15 @@ Format your response as JSON like this:
         raise HTTPException(status_code=500, detail=str(e))
 
 # Utility: Execute SQL query
-def execute_query(sql_query: str) -> List[Dict[str, Any]]:
+def execute_query(sql_query: str, db: Session) -> List[Dict[str, Any]]:
     try:
-        with engine.connect() as conn:
-            result = conn.execute(text(sql_query))
-            columns = result.keys()
-            rows = result.fetchall()
-            print(f"📊 Columns: {columns}")
-            for idx, row in enumerate(rows):
-                print(f"Row {idx}: {row}")
-            return [{col: val for col, val in zip(columns, row)} for row in rows]
+        result = db.execute(text(sql_query))
+        columns = result.keys()
+        rows = result.fetchall()
+        print(f"📊 Columns: {columns}")
+        for idx, row in enumerate(rows):
+            print(f"Row {idx}: {row}")
+        return [{col: val for col, val in zip(columns, row)} for row in rows]
     except Exception as e:
         print("❌ Exception in execute_query:", e)
         raise HTTPException(status_code=400, detail=str(e))
@@ -165,18 +169,18 @@ def execute_query(sql_query: str) -> List[Dict[str, Any]]:
 api_router = APIRouter(prefix="/api")
 
 @api_router.post("/query")
-async def process_query(data: QueryInput):
+async def process_query(data: QueryInput, db: Session = Depends(get_db)):
     try:
         user_query = data.query or data.question
         if not user_query:
             return {"sql_query": "", "results": [], "explanation": "", "error": "No query provided"}
 
-        schema_info = get_schema_info()
+        schema_info = get_schema_info(db)
         response_data = generate_sql(user_query, schema_info)
         sql_query = response_data["sql_query"]
         explanation = response_data["explanation"]
 
-        results = execute_query(sql_query)
+        results = execute_query(sql_query, db)
         return {
             "sql_query": sql_query,
             "results": results,
@@ -195,27 +199,49 @@ async def process_query(data: QueryInput):
 
 @api_router.post("/suggestions")
 def suggest_followups(request: SuggestionRequest):
-    prompt = f"""
-Based on the user's question: "{request.question}",
-suggest 3 follow-up analytical questions about employee data stored in a SQL database.
-Format as JSON:
-{{
-    "suggestions": ["...", "...", "..."]
-}}
-"""
+    domain_name = request.domain
+
+    if not domain_name or domain_name not in DOMAIN_SCHEMAS:
+        # If no domain is provided or invalid, suggest general questions
+        prompt = """
+        Suggest 3 general analytical questions about a database.
+        Format as JSON:
+        {
+            "suggestions": ["...", "...", "..."]
+        }
+        """
+    else:
+        domain_info = DOMAIN_SCHEMAS[domain_name]
+        tables = ", ".join(domain_info["tables"].keys())
+        kpis = ", ".join(domain_info["kpis"])
+        example_queries = "\n".join([f"- {q}" for q in domain_info["system_prompt"].split("Example queries and their SQL:")[1].strip().split("\n") if q.strip().startswith(tuple(str(i) for i in range(1,10)))])
+
+        prompt = f"""
+        You are an expert data analyst. Based on the '{domain_name}' domain with tables ({tables}) and key metrics ({kpis}),
+        suggest 3-5 easy, calculable analytical questions that can be answered with SQL queries.
+        Consider these examples:
+        {example_queries}
+        Format as JSON:
+        {{
+            "suggestions": ["...", "...", "...", ...]
+        }}
+        """
+
     try:
         response = openai.ChatCompletion.create(
             engine="gpt-4",
             messages=[
-                {"role": "system", "content": "You are an expert data assistant."},
+                {"role": "system", "content": "You are an expert data analyst."},
                 {"role": "user", "content": prompt}
             ],
-            temperature=0.5
+            temperature=0.7, # Increase temperature for more diverse suggestions
+            max_tokens=200
         )
-        message = response.choices[0].message.content
-        suggestions = json.loads(message).get("suggestions", [])
+        message_content = response.choices[0].message.content
+        suggestions = json.loads(message_content).get("suggestions", [])
         return {"suggestions": suggestions}
     except Exception as e:
+        print(f"Error generating suggestions: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @api_router.post("/export")
@@ -225,7 +251,7 @@ def export_csv(request: ExportRequest):
         writer = csv.DictWriter(output, fieldnames=request.data[0].keys())
         writer.writeheader()
         writer.writerows(request.data)
-        
+
         return StreamingResponse(
             iter([output.getvalue()]),
             media_type="text/csv",
@@ -243,9 +269,9 @@ def root():
     return {"message": "Database Voice Chatbot API"}
 
 @app.get("/schema")
-def get_schema():
+def get_schema(db: Session = Depends(get_db)):
     try:
-        schema_info = get_schema_info()
+        schema_info = get_schema_info(db)
         return {"schema": schema_info}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -273,7 +299,7 @@ DOMAIN_SCHEMAS = {
         "kpis": ["Total Revenue", "Sales per Project", "Average Sale Amount"],
         "system_prompt": """You are a sales analytics expert. You help users analyze sales data and project-related sales performance.
         Focus on metrics like total revenue, sales per project, and average sale amounts.
-        
+
         Example queries and their SQL:
         1. "Show me total sales amount for each project"
            SELECT p.project_name, SUM(s.amount) AS total_sales_amount
@@ -281,12 +307,12 @@ DOMAIN_SCHEMAS = {
            JOIN projects p ON s.project_id = p.project_id
            GROUP BY p.project_name
            ORDER BY total_sales_amount DESC;
-        
+
         2. "What was the total revenue in March?"
            SELECT SUM(amount) AS total_revenue
            FROM sales
            WHERE MONTH(sale_date) = 3 AND YEAR(sale_date) = YEAR(GETDATE());
-        
+
         3. "Show me sales by payment status"
            SELECT payment_status, COUNT(sale_id) AS number_of_sales, SUM(amount) AS total_amount
            FROM sales
@@ -307,7 +333,7 @@ DOMAIN_SCHEMAS = {
         "kpis": ["Average Rating", "Feedback Volume", "Feedback per Project"],
         "system_prompt": """You are a customer support and feedback analytics expert. You help users analyze customer feedback and relate it to projects.
         Focus on metrics like average ratings, volume of feedback, and specific feedback texts.
-        
+
         Example queries and their SQL:
         1. "Show me the average rating for each project"
            SELECT p.project_name, AVG(cf.rating) AS average_rating
@@ -315,13 +341,13 @@ DOMAIN_SCHEMAS = {
            JOIN projects p ON cf.project_id = p.project_id
            GROUP BY p.project_name
            ORDER BY average_rating DESC;
-        
+
         2. "How many feedback entries were received last month?"
            SELECT COUNT(feedback_id) AS total_feedback_last_month
            FROM customer_feedback
            WHERE MONTH(feedback_date) = MONTH(DATEADD(month, -1, GETDATE()))
            AND YEAR(feedback_date) = YEAR(DATEADD(month, -1, GETDATE()));
-        
+
         3. "Show me all feedback for projects with low ratings (e.g., less than 3)"
            SELECT cf.feedback_text, cf.rating, p.project_name
            FROM customer_feedback cf
@@ -343,21 +369,21 @@ DOMAIN_SCHEMAS = {
         "kpis": ["Employee Salary", "Department Performance", "Hours Worked on Projects", "Project Contribution"],
         "system_prompt": """You are an employee and project performance analytics expert. You help users analyze employee data, project involvement, and productivity metrics.
         Focus on metrics like employee salaries, department performance, hours worked on projects, and contribution percentages.
-        
+
         Example queries and their SQL:
         1. "What is the average salary by department?"
            SELECT department, AVG(salary) AS average_salary FROM employees GROUP BY department;
-        
+
         2. "Show me employees working on 'Project X' and their hours"
            SELECT e.name, ep.hours_worked
            FROM employees e
            JOIN employee_projects ep ON e.id = ep.employee_id
            JOIN projects p ON ep.project_id = p.project_id
            WHERE p.project_name = 'Project X';
-        
+
         3. "Who are the top 5 highest paid employees?"
            SELECT TOP 5 name, salary, department FROM employees ORDER BY salary DESC;
-        
+
         4. "List employees who started in the last year"
            SELECT id, name, doj, department
            FROM employees
@@ -394,4 +420,4 @@ def get_completion(messages):
         return message_content.strip()
     except Exception as e:
         print(f"Error in OpenAI API call: {str(e)}")
-        raise 
+        raise
