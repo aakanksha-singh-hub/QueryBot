@@ -70,7 +70,7 @@ import {
 
 const SPEECH_KEY = process.env.REACT_APP_SPEECH_KEY;
 const SPEECH_REGION = process.env.REACT_APP_SPEECH_REGION;
-const API_URL = process.env.REACT_APP_API_URL || 'https://data-analyser-with-voice.onrender.com';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
 const VALID_QUESTIONS = [
   "Show all employees",
@@ -620,7 +620,7 @@ function Chat() {
     console.log("handleSpeak called with text:", text);
     try {
       setIsSpeaking(true);
-      const response = await fetch('http://localhost:8000/api/synthesize_speech', {
+      const response = await fetch(`${API_URL}/api/synthesize_speech`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

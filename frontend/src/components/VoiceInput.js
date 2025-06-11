@@ -5,6 +5,8 @@ import MicOffIcon from '@mui/icons-material/MicOff';
 import * as sdk from 'microsoft-cognitiveservices-speech-sdk';
 import axios from 'axios';
 
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+
 const VoiceInput = ({ onTranscriptionComplete }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -42,7 +44,7 @@ const VoiceInput = ({ onTranscriptionComplete }) => {
         try {
           setIsProcessing(true);
           // Send to backend for transcription
-          const response = await axios.post('http://localhost:8000/transcribe', formData, {
+          const response = await axios.post(`${API_URL}/transcribe`, formData, {
             headers: {
               'Content-Type': 'multipart/form-data',
             },
