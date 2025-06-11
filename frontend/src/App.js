@@ -37,11 +37,10 @@ import {
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import LightModeOutlinedIcon from "@mui/icons-material/LightModeOutlined";
 import DarkModeOutlinedIcon from "@mui/icons-material/DarkModeOutlined";
-import "@fontsource/inter/400.css";
-import "@fontsource/inter/700.css";
+import "@fontsource/geist-sans";
+import "@fontsource/geist-mono";
 import Chat from "./components/Chat";
 import AboutPage from "./components/AboutPage";
-import ConnectPage from "./components/ConnectPage";
 import StorageIcon from "@mui/icons-material/Storage";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import CodeIcon from "@mui/icons-material/Code";
@@ -50,6 +49,7 @@ import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import BoltIcon from "@mui/icons-material/Bolt";
 import SecurityIcon from "@mui/icons-material/Security";
 import BarChartIcon from "@mui/icons-material/BarChart";
+import VolumeUpIcon from "@mui/icons-material/VolumeUp";
 
 // This comment is added to force GitHub to re-index the frontend directory.
 // It can be removed later if desired.
@@ -104,7 +104,7 @@ const getDesignTokens = (mode) => ({
   },
   typography: {
     fontFamily:
-      '"Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
+      '"Geist Sans", -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
     h3: {
       fontWeight: 700,
       letterSpacing: "-0.02em",
@@ -172,7 +172,7 @@ const getDesignTokens = (mode) => ({
             mode === "light"
               ? "0px 1px 3px rgba(0, 0, 0, 0.08), 0px 2px 5px rgba(0, 0, 0, 0.05)"
               : "0px 2px 8px rgba(0, 0, 0, 0.25)",
-          borderRadius: 12, // Consistent with shape.borderRadius
+          borderRadius: 8, // Consistent with shape.borderRadius
           overflow: "hidden", // To ensure content respects border radius
           transition: "box-shadow 0.3s ease, transform 0.3s ease",
           "&:hover": {
@@ -188,12 +188,12 @@ const getDesignTokens = (mode) => ({
     MuiCssBaseline: {
       styleOverrides: {
         html: {
-          fontFamily: '"Inter", system-ui, -apple-system, sans-serif',
+          fontFamily: '"Geist Sans", system-ui, -apple-system, sans-serif',
           WebkitFontSmoothing: "antialiased",
           MozOsxFontSmoothing: "grayscale",
         },
         code: {
-          fontFamily: '"Inter", monospace',
+          fontFamily: '"Geist Mono", monospace',
         },
       },
     },
@@ -374,13 +374,6 @@ const NavigationBar = ({ mode, toggleMode }) => {
                 </Button>
                 <Button
                   color="inherit"
-                  onClick={() => navigate("/connect")}
-                  sx={{ fontWeight: 500, fontSize: "0.95rem" }}
-                >
-                  Connect
-                </Button>
-                <Button
-                  color="inherit"
                   onClick={() => navigate("/chat")}
                   sx={{ fontWeight: 500, fontSize: "0.95rem" }}
                 >
@@ -537,7 +530,7 @@ const NavigationBar = ({ mode, toggleMode }) => {
           }}
         >
           <Box sx={{ p: 2 }}>
-            {["Home", "Connect", "Chat", "About"].map((item) => (
+            {["Home", "Chat", "About"].map((item) => (
               <Button
                 key={item}
                 color="inherit"
@@ -845,7 +838,7 @@ const HeroSection = () => {
                   bgcolor: isDark ? "rgba(17, 24, 39, 0.8)" : "#F3F4F6",
                   borderRadius: 1,
                   p: 3,
-                  fontFamily: '"Inter", monospace',
+                  fontFamily: '"Geist Mono", monospace',
                   fontSize: "0.9rem",
                   mb: 3,
                   color: isDark ? "#D1D5DB" : "#374151",
@@ -931,24 +924,19 @@ const benefits = [
     desc: "Get immediate answers to your data questions",
   },
   {
-    icon: <SecurityIcon fontSize="large" />,
-    title: "Secure Integration",
-    desc: "Connect your own Azure SQL database safely",
-  },
-  {
     icon: <BarChartIcon fontSize="large" />,
     title: "Visualize & Export",
     desc: "View results in charts and export in multiple formats",
   },
 ];
 
-// Update BenefitsSection with a bento-style layout
+// Update BenefitsSection to match the image layout more closely
 const BenefitsSection = () => {
   const theme = useTheme();
   const isDark = theme.palette.mode === "dark";
 
   return (
-    <Box sx={{ bgcolor: theme.palette.background.section, py: 10 }}>
+    <Box sx={{ py: 10 }}>
       <Container maxWidth="lg">
         <Typography
           variant="h4"
@@ -962,140 +950,139 @@ const BenefitsSection = () => {
           Key Benefits
         </Typography>
 
-        <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: { xs: "1fr", md: "repeat(2, 1fr)" },
-            gap: 3,
-          }}
-        >
-          <Card
-            elevation={0}
-            sx={{
-              p: 4,
-              display: "flex",
-              flexDirection: "column",
-              height: "100%",
-              bgcolor: isDark
-                ? "rgba(52, 102, 246, 0.1)"
-                : "rgba(52, 102, 246, 0.05)",
-              borderRadius: 1,
-              border: isDark
-                ? "1px solid rgba(52, 102, 246, 0.3)"
-                : "1px solid rgba(52, 102, 246, 0.15)",
-            }}
-          >
-            <Box sx={{ color: "primary.main", mb: 1 }}>{benefits[0].icon}</Box>
-            <Typography variant="h6" fontWeight={600} gutterBottom>
-              {benefits[0].title}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {benefits[0].desc}
-            </Typography>
-          </Card>
+        <Grid container spacing={3}>
+          {/* Left column */}
+          <Grid item xs={12} md={6}>
+            <Card
+              elevation={0}
+              sx={{
+                height: "100%",
+                borderRadius: 1,
+                overflow: "hidden",
+                display: "flex",
+                flexDirection: "column",
+                border: isDark
+                  ? "1px solid rgba(255, 255, 255, 0.1)"
+                  : "1px solid rgba(0, 0, 0, 0.05)",
+              }}
+            >
+              <Box
+                component="img"
+                src="/benefits-illustration.jpg"
+                alt="Data Analysis Benefits"
+                sx={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                }}
+              />
+              <CardContent sx={{ flexGrow: 1, p: 3 }}>
+                <Typography variant="h5" fontWeight={600} gutterBottom>
+                  Simplify Your Data Analysis
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Our platform transforms how you interact with your data,
+                  making complex database queries accessible to everyone in your
+                  organization regardless of technical expertise.
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
 
-          <Card
-            elevation={0}
-            sx={{
-              p: 4,
-              display: "flex",
-              flexDirection: "column",
-              height: "100%",
-              bgcolor: isDark
-                ? "rgba(99, 102, 241, 0.1)"
-                : "rgba(99, 102, 241, 0.05)",
-              borderRadius: 1,
-              border: isDark
-                ? "1px solid rgba(99, 102, 241, 0.3)"
-                : "1px solid rgba(99, 102, 241, 0.15)",
-            }}
-          >
-            <Box sx={{ color: "#6366F1", mb: 1 }}>{benefits[1].icon}</Box>
-            <Typography variant="h6" fontWeight={600} gutterBottom>
-              {benefits[1].title}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {benefits[1].desc}
-            </Typography>
-          </Card>
+          {/* Right column - benefits grid */}
+          <Grid item xs={12} md={6}>
+            <Grid container spacing={3} sx={{ height: "100%" }}>
+              {/* First row - two cards side by side */}
+              <Grid item xs={12} sm={6}>
+                <Card
+                  elevation={0}
+                  sx={{
+                    p: 3,
+                    height: "100%",
+                    bgcolor: isDark
+                      ? "rgba(52, 102, 246, 0.1)"
+                      : "rgba(52, 102, 246, 0.05)",
+                    borderRadius: 1,
+                    border: isDark
+                      ? "1px solid rgba(52, 102, 246, 0.3)"
+                      : "1px solid rgba(52, 102, 246, 0.15)",
+                    display: "flex",
+                    flexDirection: "column",
+                  }}
+                >
+                  <Box sx={{ color: "primary.main", mb: 1 }}>
+                    {benefits[0].icon}
+                  </Box>
+                  <Typography variant="h6" fontWeight={600} gutterBottom>
+                    {benefits[0].title}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {benefits[0].desc}
+                  </Typography>
+                </Card>
+              </Grid>
 
-          <Card
-            elevation={0}
-            sx={{
-              p: 4,
-              display: "flex",
-              flexDirection: "column",
-              height: "100%",
-              bgcolor: isDark
-                ? "rgba(239, 68, 68, 0.1)"
-                : "rgba(239, 68, 68, 0.05)",
-              borderRadius: 1,
-              border: isDark
-                ? "1px solid rgba(239, 68, 68, 0.3)"
-                : "1px solid rgba(239, 68, 68, 0.15)",
-            }}
-          >
-            <Box sx={{ color: "#EF4444", mb: 1 }}>{benefits[2].icon}</Box>
-            <Typography variant="h6" fontWeight={600} gutterBottom>
-              {benefits[2].title}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {benefits[2].desc}
-            </Typography>
-          </Card>
+              <Grid item xs={12} sm={6}>
+                <Card
+                  elevation={0}
+                  sx={{
+                    p: 3,
+                    height: "100%",
+                    bgcolor: isDark
+                      ? "rgba(99, 102, 241, 0.1)"
+                      : "rgba(99, 102, 241, 0.05)",
+                    borderRadius: 1,
+                    border: isDark
+                      ? "1px solid rgba(99, 102, 241, 0.3)"
+                      : "1px solid rgba(99, 102, 241, 0.15)",
+                    display: "flex",
+                    flexDirection: "column",
+                  }}
+                >
+                  <Box sx={{ color: "#6366F1", mb: 1 }}>{benefits[1].icon}</Box>
+                  <Typography variant="h6" fontWeight={600} gutterBottom>
+                    {benefits[1].title}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {benefits[1].desc}
+                  </Typography>
+                </Card>
+              </Grid>
 
-          <Card
-            elevation={0}
-            sx={{
-              p: 4,
-              display: "flex",
-              flexDirection: "column",
-              height: "100%",
-              bgcolor: isDark
-                ? "rgba(16, 185, 129, 0.1)"
-                : "rgba(16, 185, 129, 0.05)",
-              borderRadius: 1,
-              border: isDark
-                ? "1px solid rgba(16, 185, 129, 0.3)"
-                : "1px solid rgba(16, 185, 129, 0.15)",
-            }}
-          >
-            <Box sx={{ color: "#10B981", mb: 1 }}>{benefits[3].icon}</Box>
-            <Typography variant="h6" fontWeight={600} gutterBottom>
-              {benefits[3].title}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {benefits[3].desc}
-            </Typography>
-          </Card>
-        </Box>
+              {/* Second row - full width card */}
+              <Grid item xs={12}>
+                <Card
+                  elevation={0}
+                  sx={{
+                    p: 3,
+                    height: "100%",
+                    bgcolor: isDark
+                      ? "rgba(52, 102, 246, 0.1)"
+                      : "rgba(52, 102, 246, 0.05)",
+                    borderRadius: 1,
+                    border: isDark
+                      ? "1px solid rgba(255, 255, 255, 0.1)"
+                      : "1px solid rgba(0, 0, 0, 0.05)",
+                    display: "flex",
+                    flexDirection: "column",
+                  }}
+                >
+                  <Box sx={{ color: "#EF4444", mb: 1 }}>{benefits[2].icon}</Box>
+                  <Typography variant="h6" fontWeight={600} gutterBottom>
+                    {benefits[2].title}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {benefits[2].desc}
+                  </Typography>
+                </Card>
+              </Grid>
+            </Grid>
+          </Grid>
+        </Grid>
       </Container>
     </Box>
   );
 };
-
-const techStack = [
-  {
-    icon: <StorageIcon fontSize="large" />,
-    title: "Azure SQL Database",
-    desc: "Enterprise-grade database management",
-  },
-  {
-    icon: <AutoAwesomeIcon fontSize="large" />,
-    title: "Azure OpenAI (GPT-4)",
-    desc: "State-of-the-art language model",
-  },
-  {
-    icon: <CodeIcon fontSize="large" />,
-    title: "Python + FastAPI",
-    desc: "High-performance backend framework",
-  },
-  {
-    icon: <SpeedIcon fontSize="large" />,
-    title: "React + MUI",
-    desc: "Modern, fast, and beautiful UI",
-  },
-];
 
 // Update TechStackSection with a bento-style layout
 const TechStackSection = () => {
@@ -1146,7 +1133,7 @@ const TechStackSection = () => {
             gridTemplateColumns: {
               xs: "1fr",
               sm: "repeat(2, 1fr)",
-              lg: "repeat(4, 1fr)",
+              lg: "repeat(5, 1fr)",
             },
             gap: 3,
           }}
@@ -1259,7 +1246,7 @@ const CTASection = () => {
                               rotateY(${mousePosition.x * 0.8}deg) 
                               rotateX(${-mousePosition.y * 0.8}deg)`,
                   transition: "transform 0.1s ease-out",
-                  filter: `drop-shadow(0 20px 30px rgba(52, 102, 246, ${
+                  filter: `drop-shadow(0 20px 30px rgba(52, 246, 246, ${
                     isDark ? "0.4" : "0.25"
                   }))`,
                   zIndex: 3,
@@ -1279,8 +1266,8 @@ const CTASection = () => {
                               translateY(${mousePosition.y * 0.5}px)`,
                   borderRadius: "50%",
                   background: isDark
-                    ? "linear-gradient(135deg, rgba(52, 102, 246, 0.2), rgba(99, 102, 241, 0.1))"
-                    : "linear-gradient(135deg, rgba(52, 102, 246, 0.1), rgba(99, 102, 241, 0.05))",
+                    ? "linear-gradient(135deg, rgba(52, 246, 246, 0.2), rgba(99, 102, 241, 0.1))"
+                    : "linear-gradient(135deg, rgba(52, 246, 246, 0.1), rgba(99, 102, 241, 0.05))",
                   boxShadow: isDark
                     ? "0 15px 35px rgba(0, 0, 0, 0.2)"
                     : "0 15px 35px rgba(0, 0, 0, 0.05)",
@@ -1427,7 +1414,165 @@ const CTASection = () => {
   );
 };
 
-// Update the Footer component
+// Update the tech stack array to use actual logos with glow effect
+const techStack = [
+  {
+    icon: (
+      <Box
+        sx={{
+          position: "relative",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          "&::before": {
+            content: '""',
+            position: "absolute",
+            width: "70px",
+            height: "70px",
+            borderRadius: "50%",
+            background: "rgba(0, 120, 212, 0.15)",
+            filter: "blur(15px)",
+            zIndex: 0,
+          },
+        }}
+      >
+        <Box
+          component="img"
+          src="/logos/azure-sql.svg"
+          alt="Azure SQL Database"
+          sx={{ height: 48, width: "auto", position: "relative", zIndex: 1 }}
+        />
+      </Box>
+    ),
+    title: "Azure SQL Database",
+    desc: "Enterprise-grade database management",
+  },
+  {
+    icon: (
+      <Box
+        sx={{
+          position: "relative",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          "&::before": {
+            content: '""',
+            position: "absolute",
+            width: "70px",
+            height: "70px",
+            borderRadius: "50%",
+            background: "rgba(0, 188, 242, 0.15)",
+            filter: "blur(15px)",
+            zIndex: 0,
+          },
+        }}
+      >
+        <Box
+          component="img"
+          src="/logos/azure-openai.svg"
+          alt="Azure OpenAI"
+          sx={{ height: 48, width: "auto", position: "relative", zIndex: 1 }}
+        />
+      </Box>
+    ),
+    title: "Azure OpenAI (GPT-4)",
+    desc: "State-of-the-art language model",
+  },
+  {
+    icon: (
+      <Box
+        sx={{
+          position: "relative",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          "&::before": {
+            content: '""',
+            position: "absolute",
+            width: "70px",
+            height: "70px",
+            borderRadius: "50%",
+            background: "rgba(89, 131, 240, 0.15)",
+            filter: "blur(15px)",
+            zIndex: 0,
+          },
+        }}
+      >
+        <Box
+          component="img"
+          src="/logos/azure-speech.svg"
+          alt="Azure Speech Services"
+          sx={{ height: 48, width: "auto", position: "relative", zIndex: 1 }}
+        />
+      </Box>
+    ),
+    title: "Azure Speech Services",
+    desc: "Converts text answers into speech",
+  },
+  {
+    icon: (
+      <Box
+        sx={{
+          position: "relative",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          "&::before": {
+            content: '""',
+            position: "absolute",
+            width: "70px",
+            height: "70px",
+            borderRadius: "50%",
+            background: "rgba(63, 114, 155, 0.15)",
+            filter: "blur(15px)",
+            zIndex: 0,
+          },
+        }}
+      >
+        <Box
+          component="img"
+          src="/logos/python-fastapi.svg"
+          alt="Python + FastAPI"
+          sx={{ height: 48, width: "auto", position: "relative", zIndex: 1 }}
+        />
+      </Box>
+    ),
+    title: "Python + FastAPI",
+    desc: "High-performance backend framework",
+  },
+  {
+    icon: (
+      <Box
+        sx={{
+          position: "relative",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          "&::before": {
+            content: '""',
+            position: "absolute",
+            width: "70px",
+            height: "70px",
+            borderRadius: "50%",
+            background: "rgba(97, 218, 251, 0.15)",
+            filter: "blur(15px)",
+            zIndex: 0,
+          },
+        }}
+      >
+        <Box
+          component="img"
+          src="/logos/react-mui.svg"
+          alt="React + MUI"
+          sx={{ height: 48, width: "auto", position: "relative", zIndex: 1 }}
+        />
+      </Box>
+    ),
+    title: "React + MUI",
+    desc: "Modern, fast, and beautiful UI",
+  },
+];
+
 const Footer = () => {
   const theme = useTheme();
 
@@ -1466,7 +1611,6 @@ const Footer = () => {
         >
           ♥
         </Box>
-        
         <Box
           component="a"
           href="https://github.com/aakanksha-singh-hub"
@@ -1479,9 +1623,7 @@ const Footer = () => {
               color: theme.palette.primary.dark,
             },
           }}
-        >
-          
-        </Box>
+        ></Box>
       </Typography>
     </Box>
   );
@@ -1532,7 +1674,7 @@ function App() {
                 sx={{
                   minHeight: "100vh",
                   bgcolor: theme.palette.background.default,
-                  pt: navbarHeight, // Add padding equal to navbar height
+                  pt: navbarHeight,
                   display: "flex",
                   flexDirection: "column",
                 }}
@@ -1541,7 +1683,6 @@ function App() {
                 <Box sx={{ flex: 1 }}>
                   <Chat />
                 </Box>
-                <Footer />
               </Box>
             }
           />
@@ -1560,26 +1701,6 @@ function App() {
                 <NavigationBar mode={mode} toggleMode={toggleMode} />
                 <Box sx={{ flex: 1 }}>
                   <AboutPage />
-                </Box>
-                <Footer />
-              </Box>
-            }
-          />
-          <Route
-            path="/connect"
-            element={
-              <Box
-                sx={{
-                  minHeight: "100vh",
-                  bgcolor: theme.palette.background.default,
-                  pt: navbarHeight, // Add padding equal to navbar height
-                  display: "flex",
-                  flexDirection: "column",
-                }}
-              >
-                <NavigationBar mode={mode} toggleMode={toggleMode} />
-                <Box sx={{ flex: 1 }}>
-                  <ConnectPage />
                 </Box>
                 <Footer />
               </Box>
