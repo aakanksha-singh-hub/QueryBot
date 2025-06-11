@@ -35,7 +35,12 @@ app = FastAPI(title="Database Voice Chatbot")
 # CORS setup
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*", "http://localhost:3000"],
+    allow_origins=[
+        "http://localhost:3000",  # Local development
+        "https://*.vercel.app",   # Vercel preview deployments
+        "https://querybot-withvoice.vercel.app",  # Your Vercel production domain
+        "https://*.onrender.com"  # Allow Render deployments
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
