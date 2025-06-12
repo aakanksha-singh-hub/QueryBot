@@ -468,6 +468,7 @@ function Chat() {
                   lineHeight: 1.6,
                   marginTop: 0,
                   marginBottom: 0,
+                  color: theme.palette.mode === "dark" ? "#FFFFFF" : undefined,
                 }}
               >
                 {message.content}
