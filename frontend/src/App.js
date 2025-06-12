@@ -746,7 +746,7 @@ const HeroSection = () => {
               }}
               onClick={() => navigate("/about")}
             >
-              Talk to founders
+              About Us
             </Button>
           </Box>
         </Box>
@@ -968,7 +968,7 @@ const BenefitsSection = () => {
             >
               <Box
                 component="img"
-                src="/benefits-illustration.jpg"
+                src="/benefits-illustration.png"
                 alt="Data Analysis Benefits"
                 sx={{
                   width: "100%",
