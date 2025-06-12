@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Paper, 
-  TextField, 
-  Button, 
-  Typography, 
+import React, { useState, useEffect, useRef } from "react";
+import {
+  Paper,
+  TextField,
+  Button,
+  Typography,
   Box,
   CircularProgress,
   IconButton,
@@ -17,13 +17,22 @@ import {
   CardContent,
   Autocomplete,
   useTheme,
+  useMediaQuery,
   Tooltip,
   Divider,
   Alert,
-  Snackbar
-} from '@mui/material';
-import { 
-  Send as SendIcon, 
+  Snackbar,
+  Drawer,
+  ListItemButton,
+  ListItemIcon,
+  ListSubheader,
+  Collapse,
+  Chip,
+  Fade,
+  Fab,
+} from "@mui/material";
+import {
+  Send as SendIcon,
   Save as SaveIcon,
   BarChart as BarChartIcon,
   PieChart as PieChartIcon,
@@ -31,11 +40,20 @@ import {
   Mic as MicIcon,
   MicOff as MicOffIcon,
   Download as DownloadIcon,
-  VolumeUp as VolumeUpIcon
-} from '@mui/icons-material';
-import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { docco } from 'react-syntax-highlighter/dist/esm/styles/hljs';
-import axios from 'axios';
+  VolumeUp as VolumeUpIcon,
+  AutoAwesome as AutoAwesomeIcon,
+  MenuOpen as MenuOpenIcon,
+  Menu as MenuIcon,
+  TableChart as TableChartIcon,
+  Insights as InsightsIcon,
+  ExpandLess,
+  ExpandMore,
+  Key as KeyIcon,
+  Storage as StorageIcon,
+} from "@mui/icons-material";
+import { Light as SyntaxHighlighter } from "react-syntax-highlighter";
+import { docco } from "react-syntax-highlighter/dist/esm/styles/hljs";
+import axios from "axios";
 import {
   BarChart,
   Bar,
@@ -48,13 +66,13 @@ import {
   CartesianGrid,
   Tooltip as RechartsTooltip,
   Legend,
-  ResponsiveContainer
-} from 'recharts';
-import VoiceInput from './VoiceInput';
-import VoiceButton from './VoiceButton';
-import DomainSelector from './DomainSelector';
-import * as XLSX from 'xlsx';
-import { Pie as PieChartJS, Bar as BarChartJS } from 'react-chartjs-2';
+  ResponsiveContainer,
+} from "recharts";
+import VoiceInput from "./VoiceInput";
+import VoiceButton from "./VoiceButton";
+import DomainSelector from "./DomainSelector";
+import * as XLSX from "xlsx";
+import { Pie as PieChartJS, Bar as BarChartJS } from "react-chartjs-2";
 import {
   Chart as ChartJS,
   ArcElement,
@@ -66,11 +84,11 @@ import {
   Title as ChartTitle,
   PieController,
   BarController,
-} from 'chart.js';
+} from "chart.js";
 
 const SPEECH_KEY = process.env.REACT_APP_SPEECH_KEY;
 const SPEECH_REGION = process.env.REACT_APP_SPEECH_REGION;
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
 
 const VALID_QUESTIONS = [
   "Show all employees",
@@ -95,7 +113,7 @@ ChartJS.register(
 
 function Chat() {
   const theme = useTheme();
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState("");
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [schemaInfo, setSchemaInfo] = useState(null);
@@ -111,25 +129,39 @@ function Chat() {
   const [currentSuggestions, setCurrentSuggestions] = useState([]);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const audioRef = useRef(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [tablesExpanded, setTablesExpanded] = useState(true);
+  const [metricsExpanded, setMetricsExpanded] = useState(true);
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
+  const toggleTables = () => setTablesExpanded(!tablesExpanded);
+  const toggleMetrics = () => setMetricsExpanded(!metricsExpanded);
 
   const presetQueries = [
     "Show all employees",
     "Top 5 products by sales",
     "Sales by month",
-    "List low-stock products"
+    "List low-stock products",
   ];
 
   useEffect(() => {
     fetchSchemaInfo();
   }, []);
 
+  useEffect(() => {
+    // Close sidebar by default on mobile
+    if (isMobile) {
+      setSidebarOpen(false);
+    }
+  }, [isMobile]);
+
   const fetchSchemaInfo = async () => {
     try {
       const response = await axios.get(`${API_URL}/schema`);
       setSchemaInfo(response.data.schema);
     } catch (error) {
-      console.error('Error fetching schema:', error);
-      setSchemaInfo('Error loading schema information');
+      console.error("Error fetching schema:", error);
+      setSchemaInfo("Error loading schema information");
     }
   };
 
@@ -166,9 +198,9 @@ function Chat() {
 
   const handleExport = async (format) => {
     // Find the latest results message
-    const resultsMsg = messages.findLast(m => m.type === 'results');
+    const resultsMsg = messages.findLast((m) => m.type === "results");
     if (!resultsMsg || !Array.isArray(resultsMsg.content)) {
-      alert('No results to export!');
+      alert("No results to export!");
       return;
     }
     try {
@@ -176,19 +208,19 @@ function Chat() {
         `${API_URL}/api/export`,
         {
           data: resultsMsg.content,
-          format: format
+          format: format,
         },
-        { responseType: 'blob' }
+        { responseType: "blob" }
       );
       const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = url;
-      link.setAttribute('download', `query-results.${format}`);
+      link.setAttribute("download", `query-results.${format}`);
       document.body.appendChild(link);
       link.click();
       link.remove();
     } catch (error) {
-      console.error('Export error:', error);
+      console.error("Export error:", error);
     }
   };
 
@@ -201,9 +233,9 @@ function Chat() {
 
     // Find a suitable category (string) and value (number) column
     for (const key in firstRow) {
-      if (typeof firstRow[key] === 'string' && !categoryColumn) {
+      if (typeof firstRow[key] === "string" && !categoryColumn) {
         categoryColumn = key;
-      } else if (typeof firstRow[key] === 'number' && !valueColumn) {
+      } else if (typeof firstRow[key] === "number" && !valueColumn) {
         valueColumn = key;
       }
       // If both are found, break
@@ -215,13 +247,13 @@ function Chat() {
       return null;
     }
 
-    const chartData = data.map(row => ({
+    const chartData = data.map((row) => ({
       name: row[categoryColumn],
-      value: row[valueColumn]
+      value: row[valueColumn],
     }));
 
     switch (visualizationType) {
-      case 'bar':
+      case "bar":
         return (
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={chartData}>
@@ -234,7 +266,7 @@ function Chat() {
             </BarChart>
           </ResponsiveContainer>
         );
-      case 'pie':
+      case "pie":
         return (
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
@@ -253,16 +285,64 @@ function Chat() {
             </PieChart>
           </ResponsiveContainer>
         );
-      case 'line':
+      case "line":
         return (
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <RechartsTooltip />
-              <Legend />
-              <Line type="monotone" dataKey="value" stroke="#8884d8" />
+          <ResponsiveContainer width="100%" height={400}>
+            <LineChart
+              data={chartData}
+              margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+            >
+              <defs>
+                <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8} />
+                  <stop offset="95%" stopColor="#8884d8" stopOpacity={0.1} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke={
+                  theme.palette.mode === "dark"
+                    ? "rgba(255,255,255,0.1)"
+                    : "rgba(0,0,0,0.1)"
+                }
+              />
+              <XAxis
+                dataKey="name"
+                tick={{ fill: theme.palette.text.secondary, fontSize: 12 }}
+                axisLine={{ stroke: theme.palette.divider }}
+              />
+              <YAxis
+                tick={{ fill: theme.palette.text.secondary, fontSize: 12 }}
+                axisLine={{ stroke: theme.palette.divider }}
+              />
+              <RechartsTooltip
+                contentStyle={{
+                  backgroundColor: theme.palette.background.paper,
+                  border: `1px solid ${theme.palette.divider}`,
+                  borderRadius: 8,
+                  boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+                }}
+              />
+              <Legend wrapperStyle={{ paddingTop: 16 }} />
+              <Line
+                type="monotone"
+                dataKey="value"
+                stroke="#8884d8"
+                strokeWidth={2}
+                dot={{
+                  stroke: "#8884d8",
+                  strokeWidth: 2,
+                  fill: theme.palette.background.paper,
+                  r: 4,
+                }}
+                activeDot={{
+                  r: 6,
+                  stroke: theme.palette.background.paper,
+                  strokeWidth: 2,
+                }}
+                fillOpacity={1}
+                fill="url(#colorValue)"
+              />
             </LineChart>
           </ResponsiveContainer>
         );
@@ -271,25 +351,33 @@ function Chat() {
     }
   };
 
+  // Update the renderMessage function for a more modern UI
   const renderMessage = (message, index) => {
-    console.log("Rendering message:", message);
     if (message.type === "system") {
-        return (
+      return (
         <Box
           key={index}
           sx={{
             display: "flex",
             justifyContent: "center",
-            mb: 2,
+            mb: 3,
           }}
         >
           <Paper
+            elevation={0}
             sx={{
-              p: 2,
-              backgroundColor: "background.paper",
+              p: 2.5,
+              backgroundColor:
+                theme.palette.mode === "dark"
+                  ? "rgba(66, 66, 88, 0.6)"
+                  : "rgba(236, 240, 253, 0.8)",
+              backdropFilter: "blur(10px)",
               border: "1px solid",
-              borderColor: "divider",
-              borderRadius: 2,
+              borderColor:
+                theme.palette.mode === "dark"
+                  ? "rgba(255, 255, 255, 0.1)"
+                  : "rgba(0, 0, 0, 0.05)",
+              borderRadius: 3,
               maxWidth: "80%",
             }}
           >
@@ -300,39 +388,69 @@ function Chat() {
             >
               {message.content}
             </Typography>
-            </Paper>
-          </Box>
-        );
+          </Paper>
+        </Box>
+      );
     }
 
-        return (
+    if (!message.content && message.type !== "user" && message.type !== "sql" && message.type !== "results") {
+      return null;
+    }
+    
+    // For result messages, only filter if it's explicitly an empty array
+    if (message.type === "results" && Array.isArray(message.content) && message.content.length === 0) {
+      return null;
+    }
+
+    return (
       <Box
         key={index}
         sx={{
           display: "flex",
           justifyContent: message.type === "user" ? "flex-end" : "flex-start",
-          mb: 2,
+          mb: 3,
+          mx: 0.5,
         }}
       >
         <Paper
+          elevation={0}
           sx={{
-            p: 2,
+            p: 2.5,
             backgroundColor:
-              message.type === "user" ? "primary.main" : "background.paper",
+              message.type === "user"
+                ? theme.palette.primary.main
+                : theme.palette.mode === "dark"
+                ? "rgba(42, 45, 65, 0.7)"
+                : "rgba(255, 255, 255, 0.9)",
             color: message.type === "user" ? "white" : "text.primary",
-            maxWidth: "70%",
-            borderRadius: 2,
+            maxWidth: "75%",
+            borderRadius:
+              message.type === "user"
+                ? "36px 1px 36px 36px"
+                : "1px 36px 36px 36px",
+            backdropFilter: "blur(10px)",
+            boxShadow:
+              message.type === "user"
+                ? "0 4px 12px rgba(0, 0, 0, 0.1)"
+                : "0 2px 8px rgba(0, 0, 0, 0.05)",
+            border: message.type !== "user" ? "1px solid" : "none",
+            borderColor:
+              theme.palette.mode === "dark"
+                ? "rgba(255, 255, 255, 0.1)"
+                : "rgba(0, 0, 0, 0.05)",
           }}
         >
           {message.type === "user" && (
-            <Typography variant="body1">{message.content}</Typography>
+            <Typography variant="body1" sx={{ lineHeight: 1.5 }}>
+              {message.content}
+            </Typography>
           )}
 
-          {message.type === "sql" && (
+          {message.type === "sql" && message.content && (
             <Box>
               <Typography
                 variant="subtitle2"
-                sx={{ color: "text.secondary", mb: 1 }}
+                sx={{ color: "text.secondary", mb: 1.5, fontWeight: 600 }}
               >
                 Generated SQL:
               </Typography>
@@ -340,143 +458,256 @@ function Chat() {
                 language="sql"
                 style={docco}
                 customStyle={{
-                  backgroundColor: "rgba(0, 0, 0, 0.05)",
-                  borderRadius: 4,
-                  padding: 12,
+                  backgroundColor:
+                    theme.palette.mode === "dark"
+                      ? "rgba(0, 0, 0, 0.2)"
+                      : "rgba(0, 0, 0, 0.03)",
+                  borderRadius: 8,
+                  padding: 16,
+                  fontSize: 14,
+                  lineHeight: 1.6,
+                  marginTop: 0,
+                  marginBottom: 0,
                 }}
               >
-              {message.content}
-            </SyntaxHighlighter>
-          </Box>
+                {message.content}
+              </SyntaxHighlighter>
+            </Box>
           )}
 
           {message.type === "results" &&
             Array.isArray(message.content) &&
             message.content.length > 0 && (
               <Box>
-                {console.log("Rendering results block. Content:", message.content)}
                 <Box
                   sx={{
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
-                    mb: 1,
+                    mb: 2,
                   }}
                 >
-                  <Typography variant="subtitle2" sx={{ color: "text.secondary" }}>
+                  <Typography
+                    variant="subtitle2"
+                    sx={{ color: "text.secondary", fontWeight: 600 }}
+                  >
                     Results:
                   </Typography>
-                  <Tooltip title="Export to Excel">
+                  <Tooltip title="Export to Excel" arrow>
                     <IconButton
                       size="small"
-                      onClick={() =>
-                        handleExport(
-                          "xlsx"
-                        )
-                      }
-                      sx={{ color: "primary.main" }}
+                      onClick={() => handleExport("xlsx")}
+                      sx={{
+                        color: "primary.main",
+                        "&:hover": {
+                          backgroundColor:
+                            theme.palette.mode === "dark"
+                              ? "rgba(255, 255, 255, 0.1)"
+                              : "rgba(0, 0, 0, 0.04)",
+                        },
+                      }}
                     >
-                      <DownloadIcon />
+                      <DownloadIcon fontSize="small" />
                     </IconButton>
                   </Tooltip>
                 </Box>
 
+                {/* Visualization controls */}
+                {message.content.length > 1 && (
+                  <Box sx={{ display: "flex", gap: 1, mb: 2 }}>
+                    <Tooltip title="Bar Chart" arrow>
+                      <IconButton
+                        size="small"
+                        onClick={() => setVisualizationType("bar")}
+                        color={
+                          visualizationType === "bar" ? "primary" : "default"
+                        }
+                        sx={{
+                          border: 1,
+                          borderColor: "divider",
+                          borderRadius: 2,
+                        }}
+                      >
+                        <BarChartIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Line Chart" arrow>
+                      <IconButton
+                        size="small"
+                        onClick={() => setVisualizationType("line")}
+                        color={
+                          visualizationType === "line" ? "primary" : "default"
+                        }
+                        sx={{
+                          border: 1,
+                          borderColor: "divider",
+                          borderRadius: 2,
+                        }}
+                      >
+                        <LineChartIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Pie Chart" arrow>
+                      <IconButton
+                        size="small"
+                        onClick={() => setVisualizationType("pie")}
+                        color={
+                          visualizationType === "pie" ? "primary" : "default"
+                        }
+                        sx={{
+                          border: 1,
+                          borderColor: "divider",
+                          borderRadius: 2,
+                        }}
+                      >
+                        <PieChartIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                )}
+
                 {/* Render chart if data is suitable */}
                 {renderVisualization(message.content)}
 
+                {/* Data table */}
                 <Box
                   sx={{
-                    maxHeight: "200px",
+                    maxHeight: "300px",
                     overflow: "auto",
-                    backgroundColor: "rgba(0, 0, 0, 0.05)",
-                    borderRadius: 1,
-                    p: 1,
+                    backgroundColor:
+                      theme.palette.mode === "dark"
+                        ? "rgba(0, 0, 0, 0.2)"
+                        : "rgba(0, 0, 0, 0.03)",
+                    borderRadius: 2,
+                    mt: visualizationType ? 3 : 0,
+                    scrollbarWidth: "thin",
+                    scrollbarColor: `${theme.palette.divider} transparent`,
+                    "&::-webkit-scrollbar": {
+                      width: "8px",
+                      height: "8px",
+                    },
+                    "&::-webkit-scrollbar-track": {
+                      backgroundColor: "transparent",
+                    },
+                    "&::-webkit-scrollbar-thumb": {
+                      backgroundColor: theme.palette.divider,
+                      borderRadius: "4px",
+                    },
                   }}
                 >
-                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead>
-                    <tr>
+                  <table
+                    style={{
+                      width: "100%",
+                      borderCollapse: "collapse",
+                      fontSize: "14px",
+                    }}
+                  >
+                    <thead>
+                      <tr
+                        style={{
+                          position: "sticky",
+                          top: 0,
+                          backgroundColor: theme.palette.background.paper,
+                          zIndex: 1,
+                        }}
+                      >
                         {Object.keys(message.content[0]).map((key) => (
                           <th
                             key={key}
                             style={{
                               textAlign: "left",
-                              padding: "8px",
-                              borderBottom: "1px solid #ddd",
+                              padding: "12px 16px",
+                              borderBottom: `1px solid ${theme.palette.divider}`,
+                              fontWeight: 600,
+                              color: theme.palette.text.secondary,
                             }}
                           >
                             {key}
                           </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
                       {message.content.map((row, i) => (
-                        <tr key={i}>
+                        <tr
+                          key={i}
+                          style={{
+                            backgroundColor:
+                              i % 2 === 0
+                                ? theme.palette.mode === "dark"
+                                  ? "rgba(255,255,255,0.03)"
+                                  : "rgba(0,0,0,0.01)"
+                                : "transparent",
+                          }}
+                        >
                           {Object.values(row).map((value, j) => (
                             <td
                               key={j}
                               style={{
-                                padding: "8px",
-                                borderBottom: "1px solid #ddd",
+                                padding: "10px 16px",
+                                borderBottom: `1px solid ${theme.palette.divider}`,
+                                color: theme.palette.text.primary,
                               }}
                             >
                               {value}
                             </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </Box>
               </Box>
             )}
 
-          {message.type === "analysis" && (
-            <Box sx={{ mt: 2 }}>
+          {message.type === "analysis" && message.content && (
+            <Box sx={{ mt: 1.5 }}>
               <Typography
                 variant="subtitle2"
-                sx={{ color: "text.secondary", mb: 1 }}
+                sx={{ color: "text.secondary", mb: 1, fontWeight: 600 }}
               >
                 Explanation:
               </Typography>
-              <Typography variant="body2">{message.content}</Typography>
-          </Box>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: theme.palette.text.primary,
+                  lineHeight: 1.6,
+                }}
+              >
+                {message.content}
+              </Typography>
+            </Box>
           )}
 
           {message.type === "error" && (
-            <Alert severity="error" sx={{ mt: 2 }}>
+            <Alert
+              severity="error"
+              sx={{
+                mt: 1.5,
+                borderRadius: 2,
+                "& .MuiAlert-icon": {
+                  alignItems: "center",
+                },
+              }}
+            >
               {message.content}
             </Alert>
           )}
 
-          {(message.type === 'analysis' || message.type === 'sql') && (
-            <Box sx={{ mt: 1, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-              {message.content && (
-                <IconButton
-                  onClick={() => handleSpeak(message.content)}
-                  disabled={isSpeaking}
-                  size="small"
-                  title="Speak Answer"
-                >
-                  <VolumeUpIcon />
-                </IconButton>
-              )}
-              {message.sql_query && (
-                <IconButton
-                  onClick={() => handleSpeak(message.sql_query)}
-                  disabled={isSpeaking}
-                  size="small"
-                  title="Speak SQL"
-                >
-                  <VolumeUpIcon />
-                </IconButton>
-              )}
-            </Box>
+          {(message.type === "analysis" || message.type === "sql") && (
+            <Box
+              sx={{
+                mt: 2,
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 1,
+              }}
+            ></Box>
           )}
-            </Paper>
-          </Box>
-        );
+        </Paper>
+      </Box>
+    );
   };
 
   const generateSuggestions = async (input) => {
@@ -485,10 +716,12 @@ function Chat() {
       return;
     }
     try {
-      const response = await axios.post(`${API_URL}/api/suggestions`, { question: input });
+      const response = await axios.post(`${API_URL}/api/suggestions`, {
+        question: input,
+      });
       setSuggestions(response.data.suggestions);
     } catch (error) {
-      console.error('Error fetching suggestions:', error);
+      console.error("Error fetching suggestions:", error);
       setSuggestions([]);
     }
   };
@@ -499,16 +732,27 @@ function Chat() {
   };
 
   // Filter suggestions based on previous user questions
-  const askedQuestions = messages.filter(m => m.type === 'user').map(m => m.content);
-  const contextSuggestions = VALID_QUESTIONS.filter(q => !askedQuestions.includes(q));
+  const askedQuestions = messages
+    .filter((m) => m.type === "user")
+    .map((m) => m.content);
+  const contextSuggestions = VALID_QUESTIONS.filter(
+    (q) => !askedQuestions.includes(q)
+  );
 
   const handleDomainSelect = (domain) => {
     setSelectedDomain(domain);
+    if (isMobile) {
+      setSidebarOpen(false);
+    } else {
+      setSidebarOpen(true);
+    }
     // Add a system message about the selected domain
     setMessages([
       {
         type: "system",
-        content: `You are now exploring the ${domain.name} domain. Available tables: ${domain.schema.tables.join(
+        content: `You are now exploring the ${
+          domain.name
+        } domain. Available tables: ${domain.schema.tables.join(
           ", "
         )}. Key metrics: ${domain.schema.kpis.join(", ")}.`,
       },
@@ -621,21 +865,21 @@ function Chat() {
     try {
       setIsSpeaking(true);
       const response = await fetch(`${API_URL}/api/synthesize_speech`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ text }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to synthesize speech');
+        throw new Error("Failed to synthesize speech");
       }
 
       const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
       console.log("Generated audio URL:", audioUrl);
-      
+
       if (audioRef.current) {
         console.log("Audio ref current exists.", audioRef.current);
         audioRef.current.src = audioUrl;
@@ -647,143 +891,567 @@ function Chat() {
           const playPromise = audioRef.current.play();
 
           if (playPromise !== undefined) {
-            playPromise.then(() => {
-              console.log("Audio playback started successfully.");
-            }).catch(error => {
-              console.error("Audio playback prevented or failed:", error);
-              alert("Audio playback was prevented by the browser. Please interact with the page first or check browser settings.");
-            });
+            playPromise
+              .then(() => {
+                console.log("Audio playback started successfully.");
+              })
+              .catch((error) => {
+                console.error("Audio playback prevented or failed:", error);
+                alert(
+                  "Audio playback was prevented by the browser. Please interact with the page first or check browser settings."
+                );
+              });
           } else {
             console.log("Audio playback initiated without promise.");
           }
         }, 50); // 50ms delay
       } else {
-        console.error("Audio ref current is NULL. Audio element might not be rendered.");
+        console.error(
+          "Audio ref current is NULL. Audio element might not be rendered."
+        );
       }
     } catch (error) {
-      console.error('Error synthesizing speech:', error);
-      alert("An error occurred during speech synthesis. Check console for details.");
+      console.error("Error synthesizing speech:", error);
+      alert(
+        "An error occurred during speech synthesis. Check console for details."
+      );
     } finally {
       setIsSpeaking(false);
     }
   };
 
   return (
-    <Box sx={{ height: "100vh", display: "flex", flexDirection: "column" }}>
-      <Box sx={{ flexGrow: 1, overflow: "auto", p: 2 }}>
-        {!selectedDomain ? (
-          <DomainSelector onSelectDomain={handleDomainSelect} />
-        ) : (
-          <>
-            {messages.map((message, index) => renderMessage(message, index))}
-            <div ref={messagesEndRef} />
-          </>
-        )}
-      </Box>
-
-      {selectedDomain && (
+    <Box
+      sx={{
+        height: "90vh",
+        display: "flex",
+        flexDirection: "column",
+        bgcolor: theme.palette.mode === "dark" ? "#121212" : "#F5F7FB",
+        position: "relative",
+        "&::before": {
+          content: '""',
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundImage:
+            theme.palette.mode === "dark"
+              ? `linear-gradient(#3466F620 1px, transparent 1px), 
+             linear-gradient(90deg, #3466F620 1px, transparent 1px)`
+              : `linear-gradient(#3466F610 1px, transparent 1px), 
+             linear-gradient(90deg, #3466F610 1px, transparent 1px)`,
+          backgroundSize: "50px 50px",
+          backgroundPosition: "center center",
+          zIndex: 0,
+          opacity: 0.5,
+        },
+      }}
+    >
+      {selectedDomain ? (
         <Box
           sx={{
-            p: 2,
-            backgroundColor: "background.paper",
-            borderTop: "1px solid",
-            borderColor: "divider",
+            display: "flex",
+            flexGrow: 1,
+            overflow: "hidden",
+            position: "relative",
+            zIndex: 1,
           }}
         >
-          <Box sx={{ display: "flex", gap: 1 }}>
-      <TextField
-        fullWidth
-        variant="outlined"
-        placeholder="Ask a question about your data..."
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyPress={handleKeyPress}
-              disabled={isLoading}
-        multiline
-              maxRows={4}
-        sx={{
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: 2,
-          },
-        }}
-      />
-            <Tooltip title={isRecording ? "Stop Recording" : "Start Recording"}>
-  <IconButton 
-                onClick={toggleRecording}
-                color={isRecording ? "error" : "primary"}
-                disabled={isLoading}
-              >
-                {isRecording ? <MicOffIcon /> : <MicIcon />}
-  </IconButton>
-            </Tooltip>
-            <Button
-              variant="contained"
-              onClick={handleSend}
-              disabled={isLoading || !input.trim()}
-              sx={{
-                borderRadius: 2,
-                minWidth: "100px",
-              }}
-            >
-              {isLoading ? <CircularProgress size={24} /> : <SendIcon />}
-            </Button>
-</Box>
-
-          <Grid item xs={12} sx={{ mt: 2 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-              <Button
-                variant="outlined"
-                onClick={handleSuggestQuestions}
-                disabled={isLoading}
-                sx={{
-                  textTransform: 'none',
-                  borderColor: theme.palette.primary.main,
-                  color: theme.palette.primary.main,
-                  '&:hover': {
-                    borderColor: theme.palette.primary.dark,
-                  }
-                }}
-              >
-                Suggest Questions
-              </Button>
-            </Box>
-          </Grid>
-
-        <Menu
-          anchorEl={anchorEl}
-            open={showSuggestions}
-            onClose={handleCloseSuggestions}
-            MenuListProps={{
-              'aria-labelledby': 'suggestions-button',
+          {/* Schema Sidebar */}
+          <Drawer
+            variant={isMobile ? "temporary" : "persistent"}
+            open={sidebarOpen}
+            onClose={() => setSidebarOpen(false)}
+            sx={{
+              width: sidebarOpen ? { xs: 280, lg: 320 } : 0,
+              flexShrink: 0,
+              "& .MuiDrawer-paper": {
+                width: { xs: 280, lg: 320 },
+                boxSizing: "border-box",
+                borderRight: "1px solid",
+                borderColor: "divider",
+                bgcolor: theme.palette.mode === "dark" ? "#1A1B25" : "#FFFFFF",
+                boxShadow: "0 0 20px rgba(0,0,0,0.05)",
+              },
             }}
           >
-            {currentSuggestions.length > 0 ? (
-              currentSuggestions.map((suggestion, index) => (
-                <MenuItem key={index} onClick={() => handleSuggestionClick(suggestion)}>
-                  {suggestion}
-          </MenuItem>
-              ))
-            ) : (
-              <MenuItem disabled>No suggestions available</MenuItem>
-            )}
-        </Menu>
+            <Box
+              sx={{
+                p: 2,
+                borderBottom: "1px solid",
+                borderColor: "divider",
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              <Box
+                sx={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: "12px",
+                  backgroundColor: `${selectedDomain.color}15`,
+                  color: selectedDomain.color,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  mr: 2,
+                }}
+              >
+                {selectedDomain.icon}
+              </Box>
+              <Box>
+                <Typography variant="subtitle1" fontWeight={600}>
+                  {selectedDomain.name}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Data Schema Explorer
+                </Typography>
+              </Box>
+            </Box>
+
+            <List
+              sx={{
+                width: "100%",
+                bgcolor: "background.paper",
+                py: 0,
+              }}
+            >
+              {/* Tables Section */}
+              <ListItemButton onClick={toggleTables}>
+                <ListItemIcon>
+                  <StorageIcon color="primary" />
+                </ListItemIcon>
+                <ListItemText
+                  primary={
+                    <Typography
+                      variant="subtitle2"
+                      fontWeight={600}
+                      sx={{ display: "flex", alignItems: "center" }}
+                    >
+                      Available Tables
+                    </Typography>
+                  }
+                />
+                {tablesExpanded ? <ExpandLess /> : <ExpandMore />}
+              </ListItemButton>
+              <Collapse in={tablesExpanded} timeout="auto" unmountOnExit>
+                <List component="div" disablePadding>
+                  {selectedDomain.schema.tables.map((table) => (
+                    <ListItemButton
+                      key={table}
+                      sx={{ pl: 4 }}
+                      onClick={() => {
+                        setInput(`Show me the schema for ${table}`);
+                        if (isMobile) setSidebarOpen(false);
+                      }}
+                    >
+                      <ListItemIcon sx={{ minWidth: 36 }}>
+                        <TableChartIcon fontSize="small" color="action" />
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={
+                          <Typography
+                            variant="body2"
+                            sx={{ textTransform: "lowercase" }}
+                          >
+                            {table}
+                          </Typography>
+                        }
+                      />
+                      <Chip
+                        label="Query"
+                        size="small"
+                        color="primary"
+                        variant="outlined"
+                        sx={{
+                          height: 22,
+                          fontSize: "0.625rem",
+                          visibility: "hidden",
+                          ".MuiListItemButton-root:hover &": {
+                            visibility: "visible",
+                          },
+                        }}
+                      />
+                    </ListItemButton>
+                  ))}
+                </List>
+              </Collapse>
+
+              {/* KPIs Section */}
+              <ListItemButton onClick={toggleMetrics}>
+                <ListItemIcon>
+                  <KeyIcon sx={{ color: theme.palette.secondary.main }} />
+                </ListItemIcon>
+                <ListItemText
+                  primary={
+                    <Typography variant="subtitle2" fontWeight={600}>
+                      Key Metrics
+                    </Typography>
+                  }
+                />
+                {metricsExpanded ? <ExpandLess /> : <ExpandMore />}
+              </ListItemButton>
+              <Collapse in={metricsExpanded} timeout="auto" unmountOnExit>
+                <List component="div" disablePadding>
+                  {selectedDomain.schema.kpis.map((kpi) => (
+                    <ListItemButton
+                      key={kpi}
+                      sx={{ pl: 4 }}
+                      onClick={() => {
+                        setInput(`Show me the trend for ${kpi}`);
+                        if (isMobile) setSidebarOpen(false);
+                      }}
+                    >
+                      <ListItemIcon sx={{ minWidth: 36 }}>
+                        <InsightsIcon fontSize="small" color="action" />
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={<Typography variant="body2">{kpi}</Typography>}
+                      />
+                    </ListItemButton>
+                  ))}
+                </List>
+              </Collapse>
+
+              {/* Sample queries section */}
+              <Box sx={{ p: 2, mt: 2 }}>
+                <Typography
+                  variant="subtitle2"
+                  color="text.secondary"
+                  sx={{ mb: 1.5, fontWeight: 600 }}
+                >
+                  Sample Queries
+                </Typography>
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                  {presetQueries.map((query, idx) => (
+                    <Button
+                      key={idx}
+                      variant="outlined"
+                      size="small"
+                      onClick={() => {
+                        setInput(query);
+                        if (isMobile) setSidebarOpen(false);
+                      }}
+                      sx={{
+                        justifyContent: "flex-start",
+                        textTransform: "none",
+                        px: 2,
+                        py: 1,
+                        lineHeight: 1.3,
+                        fontWeight: 400,
+                        fontSize: "0.8125rem",
+                        borderColor: "divider",
+                        color: "text.primary",
+                        "&:hover": {
+                          bgcolor: theme.palette.action.hover,
+                        },
+                      }}
+                    >
+                      {query}
+                    </Button>
+                  ))}
+                </Box>
+              </Box>
+            </List>
+          </Drawer>
+
+          {/* Main chat area */}
+          <Box
+            sx={{
+              flexGrow: 1,
+              display: "flex",
+              flexDirection: "column",
+              position: "relative",
+              maxWidth: {
+                xs: "100%", 
+                md: `calc(100vw - ${sidebarOpen ? '320px' : '0px'})` 
+              },
+              width: "100%",
+              overflow: "hidden" // Prevent content from flowing outside
+            }}
+          >
+            {/* Toggle sidebar button for mobile */}
+            <Fade in={true}>
+              <Fab
+                color="primary"
+                size="small"
+                aria-label="toggle sidebar"
+                onClick={toggleSidebar}
+                sx={{
+                  position: "absolute",
+                  top: 16,
+                  left: 16,
+                  zIndex: 10,
+                  display: { md: "none" },
+                }}
+              >
+                {sidebarOpen ? <MenuOpenIcon /> : <MenuIcon />}
+              </Fab>
+            </Fade>
+
+            {/* Messages area */}
+            <Box
+              sx={{
+                flexGrow: 1,
+                overflow: "auto",
+                p: { xs: 2, md: 4 },
+                scrollbarWidth: "thin",
+                scrollbarColor: `${theme.palette.divider} transparent`,
+                "&::-webkit-scrollbar": {
+                  width: "8px",
+                },
+                "&::-webkit-scrollbar-track": {
+                  backgroundColor: "transparent",
+                },
+                "&::-webkit-scrollbar-thumb": {
+                  backgroundColor: theme.palette.divider,
+                  borderRadius: "36px 1px 36px 36px",
+                },
+              }}
+            >
+              {messages.map((message, index) => renderMessage(message, index))}
+              <div ref={messagesEndRef} />
+            </Box>
+
+            {/* Input area */}
+            <Box
+              sx={{
+                p: { xs: 2, sm: 3 },
+                backgroundColor: theme.palette.background.paper,
+                borderTop: "1px solid",
+                borderColor: "divider",
+                position: "relative",
+                zIndex: 2,
+                boxShadow: "0 -4px 20px rgba(0,0,0,0.05)",
+              }}
+            >
+              <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      gap: 1.5,
+                      alignItems: "flex-end",
+                    }}
+                  >
+                    <TextField
+                      fullWidth
+                      variant="outlined"
+                      placeholder="Ask a question about your data"
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                      disabled={isLoading}
+                      multiline
+                      maxRows={4}
+                      sx={{
+                        "& .MuiOutlinedInput-root": {
+                          borderRadius: 3,
+                          backgroundColor:
+                            theme.palette.mode === "dark"
+                              ? "rgba(255, 255, 255, 0.05)"
+                              : "rgba(0, 0, 0, 0.02)",
+                          transition: "all 0.2s",
+                          "&:hover": {
+                            backgroundColor:
+                              theme.palette.mode === "dark"
+                                ? "rgba(255, 255, 255, 0.1)"
+                                : "rgba(0, 0, 0, 0.04)",
+                          },
+                          "& fieldset": {
+                            transition: "all 0.2s",
+                          },
+                          "&.Mui-focused fieldset": {
+                            borderWidth: "1px",
+                          },
+                        },
+                        "& .MuiOutlinedInput-input": {
+                          paddingLeft: 1.5,
+                          paddingRight: 1.5,
+                        },
+                      }}
+                    />
+                    <Tooltip
+                      title={isRecording ? "Stop Recording" : "Start Recording"}
+                      arrow
+                    >
+                      <IconButton
+                        onClick={toggleRecording}
+                        color={isRecording ? "error" : "primary"}
+                        disabled={isLoading}
+                        sx={{
+                          height: 60,
+                          width: 60,
+                          borderRadius: 3,
+                          backgroundColor: theme.palette.background.paper,
+                          border: "1px solid",
+                          borderColor: isRecording ? "error.main" : "divider",
+                          "&:hover": {
+                            backgroundColor: theme.palette.action.hover,
+                          },
+                        }}
+                      >
+                        {isRecording ? <MicOffIcon /> : <MicIcon />}
+                      </IconButton>
+                    </Tooltip>
+                    <Button
+                      variant="contained"
+                      onClick={handleSend}
+                      disabled={isLoading || !input.trim()}
+                      sx={{
+                        borderRadius: 3,
+                        minWidth: 120,
+                        height: 60,
+                        boxShadow: "none",
+                        "&:hover": {
+                          boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                        },
+                      }}
+                      startIcon={
+                        isLoading ? (
+                          <CircularProgress size={20} color="inherit" />
+                        ) : (
+                          <SendIcon />
+                        )
+                      }
+                    >
+                      {isLoading ? "Processing" : "Send"}
+                    </Button>
+                  </Box>
+                </Grid>
+
+                <Grid item xs={12} sx={{ mt: 1 }}>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Typography variant="caption" color="text.secondary">
+                      {isRecording
+                        ? "Listening..."
+                        : "Ask questions in natural language"}
+                    </Typography>
+                    <Button
+                      variant="text"
+                      size="small"
+                      onClick={handleSuggestQuestions}
+                      disabled={isLoading}
+                      startIcon={<AutoAwesomeIcon fontSize="small" />}
+                      sx={{
+                        textTransform: "none",
+                        color: theme.palette.primary.main,
+                        "&:hover": {
+                          backgroundColor: "transparent",
+                          textDecoration: "underline",
+                        },
+                      }}
+                    >
+                      Suggest Questions
+                    </Button>
+                  </Box>
+                </Grid>
+              </Grid>
+
+              <Menu
+                anchorEl={anchorEl}
+                open={showSuggestions}
+                onClose={handleCloseSuggestions}
+                PaperProps={{
+                  elevation: 2,
+                  sx: {
+                    mt: 1,
+                    borderRadius: 2,
+                    border: "1px solid",
+                    borderColor: theme.palette.divider,
+                    maxHeight: 300,
+                    width: 700,
+                  },
+                }}
+              >
+                <Typography
+                  sx={{
+                    px: 2,
+                    py: 1.5,
+                    fontWeight: 600,
+                    color: "text.secondary",
+                    borderBottom: "1px solid",
+                    borderColor: "divider",
+                  }}
+                >
+                  Suggested Questions
+                </Typography>
+                {currentSuggestions.length > 0 ? (
+                  currentSuggestions.map((suggestion, index) => (
+                    <MenuItem
+                      key={index}
+                      onClick={() => handleSuggestionClick(suggestion)}
+                      sx={{
+                        py: 1.5,
+                        px: 2,
+                        borderRadius: 1,
+                        mx: 1,
+                        my: 0.5,
+                        "&:hover": {
+                          backgroundColor: theme.palette.action.hover,
+                        },
+                      }}
+                    >
+                      <Typography variant="body2">{suggestion}</Typography>
+                    </MenuItem>
+                  ))
+                ) : (
+                  <MenuItem disabled sx={{ py: 2, px: 2 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      No suggestions available
+                    </Typography>
+                  </MenuItem>
+                )}
+              </Menu>
+            </Box>
           </Box>
-        )}
+        </Box>
+      ) : (
+        // Domain selector shown when no domain is selected
+        <Box
+          sx={{
+            flexGrow: 1,
+            overflow: "auto",
+            p: { xs: 2, md: 4 },
+            position: "relative",
+            zIndex: 1,
+          }}
+        >
+          <DomainSelector onSelectDomain={handleDomainSelect} />
+        </Box>
+      )}
 
       <Snackbar
         open={!!error}
         autoHideDuration={6000}
         onClose={() => setError(null)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        sx={{ mb: 2 }}
       >
-        <Alert severity="error" onClose={() => setError(null)}>
+        <Alert
+          severity="error"
+          onClose={() => setError(null)}
+          sx={{
+            width: "100%",
+            boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+            borderRadius: 2,
+          }}
+        >
           {error}
         </Alert>
       </Snackbar>
 
-      {/* Audio element moved here for direct access by audioRef */}
-      <audio ref={audioRef} style={{ display: 'none' }} controls />
+      {/* Audio element for speech synthesis */}
+      <audio ref={audioRef} style={{ display: "none" }} controls />
     </Box>
   );
 }
 
-export default Chat; 
+export default Chat;
