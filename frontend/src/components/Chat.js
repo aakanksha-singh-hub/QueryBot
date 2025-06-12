@@ -1366,8 +1366,8 @@ function Chat() {
                     borderRadius: 2,
                     border: "1px solid",
                     borderColor: theme.palette.divider,
-                    maxHeight: 300,
-                    width: 700,
+                    overflowX: "auto",
+                    maxWidth: 700,
                   },
                 }}
               >
