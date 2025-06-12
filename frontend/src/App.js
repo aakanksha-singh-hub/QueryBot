@@ -309,7 +309,7 @@ const NavigationBar = ({ mode, toggleMode }) => {
               ? "0px 2px 8px rgba(0, 0, 0, 0.12)"
               : "0px 1px 3px rgba(0, 0, 0, 0.08)",
             py: 0,
-            maxWidth: "100%",
+            maxWidth: { xs: "100%", md: "900px" },
             width: { xs: "100%", md: "900px" },
             transition: "box-shadow 0.3s ease",
             border:
