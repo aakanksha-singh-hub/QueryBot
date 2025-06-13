@@ -165,6 +165,22 @@ const AboutPage = () => {
           "&::before": {
             content: '""',
             position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundImage: isDark
+              ? `linear-gradient(#3466F620 1px, transparent 1px), 
+                 linear-gradient(90deg, #3466F620 1px, transparent 1px)`
+              : `linear-gradient(#3466F610 1px, transparent 1px), 
+                 linear-gradient(90deg, #3466F610 1px, transparent 1px)`,
+            backgroundSize: "50px 50px",
+            backgroundPosition: "center center",
+            zIndex: 0,
+          },
+          "&::after": {
+            content: '""',
+            position: "absolute",
             top: "-100%", // Fixed positioning
             left: "-50%", // Fixed positioning
             width: "200%", // Increased width to ensure full coverage
@@ -293,14 +309,14 @@ QueryBot enables users to query an Azure SQL database using natural language - e
               </Box>
               <Typography variant="body2" color="text.secondary">
                 Start by typing or speaking a question about the data, such as{" "}
-                <strong>"Show me monthly sales for 2024"</strong>. You don't need to write SQL —
+                <strong>"Show me monthly sales for 2024"</strong>. You don't need to write SQL - 
                 just use natural language!
               </Typography>
               <Box sx={{ mt: "auto", pt: 2 }}>
                 <img
                   src="/ask-preview.png"
                   alt="Ask question preview"
-                  style={{ width: "100%", borderRadius: "4px", objectFit: "cover", opacity: 0.85 }}
+                  style={{ width: "100%", borderRadius: "4px",  objectFit:"cover", opacity: 0.85 }}
                 />
               </Box>
             </Card>
@@ -328,7 +344,7 @@ QueryBot enables users to query an Azure SQL database using natural language - e
                 <Box sx={{ color: theme.palette.primary.main }}>
                   <BarChartOutlinedIcon />
                 </Box>
-                  <Typography variant="h6" fontWeight={600}>
+                <Typography variant="h6" fontWeight={600}>
                   See Results Instantly
                 </Typography>
               </Box>
@@ -374,8 +390,15 @@ QueryBot enables users to query an Azure SQL database using natural language - e
               </Box>
               <Typography variant="body2" color="text.secondary" mb={2}>
                 Review the SQL generated, fix errors (if any), download the results,
-                or follow up with a refined query — all in a simple chat flow.
+                or follow up with a refined query - all in a simple chat flow.
               </Typography>
+              <Box sx={{ mt: "auto", pt: 2 }}>
+                <img
+                  src="/download-preview.png"
+                  alt="Download or refine preview"
+                  style={{ width: "100%", borderRadius: "4px", maxHeight: "200px", opacity: 0.95, objectFit:"contain" }}
+                />
+              </Box>
             </Card>
 
             {/* Step 4: Understand Output */}
@@ -424,26 +447,26 @@ QueryBot enables users to query an Azure SQL database using natural language - e
         </Section>
 
         <Section title="How It Works" icon={<HelpOutlineIcon fontSize="medium" />}>
-          <Card elevation={0} sx={{ borderRadius: 1 }}>
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <Box sx={{ pl: 2, pt: 1.5 }}>
-                  <Typography variant="body1" gutterBottom>1. <strong>Ask</strong> using text or voice</Typography>
-                  <Typography variant="body1" gutterBottom>2. <strong>Get output</strong> — SQL + charts + table</Typography>
-                  <Typography variant="body1" gutterBottom>3. <strong>Refine, download</strong>, or debug</Typography>
-                  <Typography variant="body1" gutterBottom>4. <strong>Explore suggestions</strong> or try sample queries</Typography> {/* ✅ NEW POINT */}
-                </Box>
-                <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "flex-end",
-                    mt: 1.5,
-                  }}
-                />
-              </Grid>
-            </Grid>
-          </Card>
-        </Section>
+  <Card elevation={0} sx={{ borderRadius: 1 }}>
+    <Grid container spacing={2}>
+      <Grid item xs={12}>
+        <Box sx={{ pl: 2, pt: 1.5 }}>
+          <Typography variant="body1" gutterBottom>1. <strong>Ask</strong> using text or voice</Typography>
+          <Typography variant="body1" gutterBottom>2. <strong>Get output</strong> - SQL + charts + table</Typography>
+          <Typography variant="body1" gutterBottom>3. <strong>Refine, download</strong>, or debug</Typography>
+          <Typography variant="body1" gutterBottom>4. <strong>Explore suggestions</strong> or try sample queries</Typography> {/* ✅ NEW POINT */}
+        </Box>
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "flex-end",
+            mt: 1.5,
+          }}
+        />
+      </Grid>
+    </Grid>
+  </Card>
+</Section>
 
         {/* Fifth card - wide */}
         <Section title="Sample Queries" icon={<CodeIcon fontSize="medium" />}>
