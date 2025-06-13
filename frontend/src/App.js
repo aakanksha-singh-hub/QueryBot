@@ -1575,56 +1575,166 @@ const techStack = [
 
 const Footer = () => {
   const theme = useTheme();
+  const isDark = theme.palette.mode === "dark";
+  const navigate = useNavigate();
+
+  // Animation variants for the footer elements
+  const [hovered, setHovered] = useState(null);
 
   return (
     <Box
       component="footer"
       sx={{
-        py: 4,
-        textAlign: "center",
+        py: 4, // Reduced padding
         borderTop: `1px solid ${
-          theme.palette.mode === "light"
-            ? "rgba(0, 0, 0, 0.08)"
-            : "rgba(255, 255, 255, 0.08)"
+          isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)"
         }`,
+        position: "relative",
+        overflow: "hidden",
+        "&::before": {
+          content: '""',
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundImage: isDark
+            ? `linear-gradient(#3466F608 1px, transparent 1px), 
+           linear-gradient(90deg, #3466F608 1px, transparent 1px)`
+            : `linear-gradient(#3466F605 1px, transparent 1px), 
+           linear-gradient(90deg, #3466F605 1px, transparent 1px)`,
+          backgroundSize: "40px 40px",
+          backgroundPosition: "center center",
+          zIndex: 0,
+        },
       }}
     >
-      <Typography
-        variant="body2"
-        color="text.secondary"
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 0.5,
-        }}
-      >
-        Made with
+      <Container maxWidth="lg" sx={{ position: "relative", zIndex: 1 }}>
+        <Grid
+          container
+          spacing={3}
+          alignItems="center"
+          justifyContent="space-between"
+        >
+          {/* Logo and Brand Section */}
+          <Grid item xs={12} md={4}>
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: { xs: "center", md: "flex-start" },
+                mb: { xs: 2, md: 0 },
+              }}
+            >
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  mb: 1.5,
+                  transition: "transform 0.3s ease",
+                  "&:hover": {},
+                }}
+                component={Link}
+                to="/"
+              >
+                <Box
+                  component="img"
+                  src="/logo.svg"
+                  alt="QueryBot Logo"
+                  sx={{
+                    width: 36,
+                    height: 36,
+                    mr: 1.5,
+                    filter: "drop-shadow(0 4px 6px rgba(52, 102, 246, 0.2))",
+                  }}
+                />
+                <Typography
+                  variant="h5"
+                  sx={{
+                    fontWeight: 800,
+                    letterSpacing: "-0.02em",
+                    background: isDark ? "white" : "black",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                  }}
+                >
+                  QueryBot
+                </Typography>
+              </Box>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{
+                  maxWidth: "300px",
+                  mb: 0,
+                  textAlign: { xs: "center", md: "left" },
+                }}
+              >
+                Effortlessly query your database using natural language, powered
+                by AI.
+              </Typography>
+            </Box>
+          </Grid>
+
+          {/* Navigation Links */}
+          <Grid item xs={12} md={4}>
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "row",
+                justifyContent: "center",
+                alignItems: "center",
+                gap: 3,
+              }}
+            >
+              {[
+                { label: "Home", path: "/" },
+                { label: "Chat", path: "/chat" },
+                { label: "About", path: "/about" },
+              ].map((link, idx) => (
+                <Box
+                  key={idx}
+                  component={Link}
+                  to={link.path}
+                  sx={{
+                    color: "text.secondary",
+                    textDecoration: "none",
+                    fontSize: "0.875rem",
+                    position: "relative",
+                    "&:hover": {
+                      color: theme.palette.secondary.main,
+                    },
+                  }}
+                >
+                  {link.label}
+                </Box>
+              ))}
+            </Box>
+          </Grid>
+        </Grid>
+
+        {/* Bottom copyright section */}
         <Box
-          component="span"
           sx={{
-            color: theme.palette.error.main,
-            fontSize: "1.2rem",
-            lineHeight: 1,
-            mt: "2px",
+            borderTop: `1px solid ${
+              isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.03)"
+            }`,
+            mt: 3,
+            pt: 2,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
           }}
         >
-          ♥
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{ textAlign: "center" }}
+          >
+            © {new Date().getFullYear()} QueryBot. All rights reserved.
+          </Typography>
         </Box>
-        <Box
-          component="a"
-          href="https://github.com/aakanksha-singh-hub"
-          target="_blank"
-          rel="noopener noreferrer"
-          sx={{
-            color: theme.palette.primary.main,
-            textDecoration: "none",
-            "&:hover": {
-              color: theme.palette.primary.dark,
-            },
-          }}
-        ></Box>
-      </Typography>
+      </Container>
     </Box>
   );
 };
