@@ -22,6 +22,7 @@ import {
   Button,
 } from "@mui/material";
 import ContentCopy from "@mui/icons-material/ContentCopy";
+import MicIcon from "@mui/icons-material/Mic";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import DescriptionOutlinedIcon from "@mui/icons-material/DescriptionOutlined";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
@@ -40,16 +41,8 @@ import BarChartIcon from "@mui/icons-material/BarChart";
 import ShowChart from "@mui/icons-material/ShowChart";
 import PieChart from "@mui/icons-material/PieChart";
 import FileDownload from "@mui/icons-material/FileDownload";
-import { Link } from "react-router-dom";
-import TextsmsOutlinedIcon from '@mui/icons-material/TextsmsOutlined';
-import SummarizeOutlinedIcon from '@mui/icons-material/SummarizeOutlined';
-import DownloadIcon from '@mui/icons-material/Download';
-import DashboardIcon from '@mui/icons-material/Dashboard';
-import KeyboardVoiceOutlinedIcon from '@mui/icons-material/KeyboardVoiceOutlined';
-import BarChartOutlinedIcon from '@mui/icons-material/BarChartOutlined';
-import BusinessCenterIcon from '@mui/icons-material/BusinessCenter';
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
-import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+import { Link } from "react-router-dom";
 
 const sampleQueries = [
   {
@@ -78,11 +71,6 @@ const challenges = [
   {
     challenge: "Handling runtime SQL errors",
     solution: "Implemented a TRY-CATCH wrapper and safe failure messages",
-  },
-  {
-    challenge: "Connecting to Azure SQL databases securely",
-    solution:
-      "Used environment-level access configuration with scoped credentials",
   },
   {
     challenge: "Designing an intuitive interface",
@@ -233,7 +221,7 @@ const AboutPage = () => {
               sx={{ maxWidth: "800px", mx: "auto", fontWeight: 400 }}
             >
               A streamlined, production-ready platform that enables users to
-              query structured databases using natural language via text and voice input
+              query structured databases using natural language
             </Typography>
           </Box>
         </Container>
@@ -261,7 +249,12 @@ const AboutPage = () => {
               variant="body1"
               sx={{ color: theme.palette.text.primary }}
             >
-QueryBot enables users to query an Azure SQL database using natural language - either typed or spoken. It converts user questions into SQL, runs them securely on the database, and presents the results in a structured table along with an easy-to-understand summary. The app also provides smart query suggestions, domain-specific schema insights, and a dashboard to explore different data areas like Sales, HR, or Support. It's built to make data exploration effortless, even for users with no technical background.
+              This application enables users to query an Azure SQL database
+              using plain English. It translates natural language queries into
+              executable SQL statements, runs them against the connected
+              database, and returns neatly formatted results. In addition to
+              conversational querying, the system also includes a database
+              explorer, schema insights, and intelligent query suggestions.
             </Typography>
           </Card>
         </Section>
@@ -279,7 +272,366 @@ QueryBot enables users to query an Azure SQL database using natural language - e
               gridAutoFlow: "dense",
             }}
           >
-            {/* Step 1: Ask a Question */}
+            {/* First large card - spans 2x2 */}
+            <Card
+              elevation={0}
+              sx={{
+                p: 3,
+                borderRadius: 1,
+                gridColumn: { xs: "span 1", md: "span 3" },
+                gridRow: { xs: "span 1", md: "span 1" },
+                height: "100%",
+                transition: "all 0.3s ease",
+                border: `1px solid ${
+                  isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)"
+                }`,
+                "&:hover": {
+                  transform: "translateY(-3px)",
+                  boxShadow: isDark
+                    ? "0 10px 20px rgba(0,0,0,0.2)"
+                    : "0 10px 20px rgba(0,0,0,0.1)",
+                },
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
+              <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
+                <Box sx={{ color: theme.palette.primary.main }}>
+                  <StorageOutlinedIcon />
+                </Box>
+                <Typography variant="h6" fontWeight={600}>
+                  Data Insights
+                </Typography>
+              </Box>
+
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                This section provides actionable insights from your data.
+                Explore trends, patterns, and aggregated metrics to make
+                informed decisions. The platform supports interactive
+                visualizations and detailed reports for deeper analysis.
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Go to the{" "}
+                <Typography
+                  component={Link}
+                  to="/chat"
+                  sx={{
+                    color: theme.palette.primary.main,
+                    fontFamily: "'Geist Mono', monospace",
+                    fontWeight: 600,
+                    fontSize: "0.85rem",
+                    textDecoration: "none",
+                    px: 1,
+                    py: 0.5,
+                    bgcolor: isDark
+                      ? "rgba(52, 102, 246, 0.1)"
+                      : "rgba(52, 102, 246, 0.05)",
+                    borderRadius: "4px",
+                    "&:hover": {
+                      bgcolor: isDark
+                        ? "rgba(52, 102, 246, 0.2)"
+                        : "rgba(52, 102, 246, 0.1)",
+                    },
+                  }}
+                >
+                  Chat
+                </Typography>{" "}
+                page and type a natural language query such as
+                <Box
+                  sx={{
+                    fontFamily: "'Geist Mono', monospace",
+                    fontSize: "0.75rem",
+                    color: isDark
+                      ? "rgba(255,255,255,0.85)"
+                      : "rgba(0,0,0,0.85)",
+                    p: 1.5,
+                    borderRadius: 1,
+                    bgcolor: isDark ? "rgba(0,0,0,0.3)" : "rgba(0,0,0,0.02)",
+                    border: `1px solid ${
+                      isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"
+                    }`,
+                    flexGrow: 1,
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                    marginTop: 1,
+                  }}
+                >
+                  <Typography
+                    variant="body2"
+                    component="pre"
+                    sx={{
+                      fontFamily: "'Geist Mono', monospace",
+                      fontSize: "0.75rem",
+                      lineHeight: 1.5,
+                      m: 0,
+                      whiteSpace: "pre-wrap",
+                    }}
+                  >
+                    What is the average sae amount per transaction?
+                  </Typography>
+                </Box>
+              </Typography>
+
+              <Box sx={{ mt: "auto", pt: 2 }}>
+                <img
+                  src="/chat-preview.png"
+                  alt="Chat interface"
+                  style={{
+                    width: "100%",
+                    height: "auto",
+                    borderRadius: "4px",
+                    opacity: 0.8,
+                  }}
+                />
+              </Box>
+            </Card>
+
+            {/* Second card - tall format */}
+            <Card
+              elevation={0}
+              sx={{
+                p: 3,
+                borderRadius: 1,
+                gridColumn: { xs: "span 1", md: "span 2" },
+                gridRow: { xs: "span 1", md: "span 1" },
+                height: "100%",
+                transition: "all 0.3s ease",
+                border: `1px solid ${
+                  isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)"
+                }`,
+                "&:hover": {
+                  transform: "translateY(-3px)",
+                  boxShadow: isDark
+                    ? "0 10px 20px rgba(0,0,0,0.2)"
+                    : "0 10px 20px rgba(0,0,0,0.1)",
+                },
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
+              <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
+                <Box sx={{ color: theme.palette.primary.main }}>
+                  <QuizOutlinedIcon />
+                </Box>
+                <Typography variant="h6" fontWeight={600}>
+                  Explore Your Dataset
+                </Typography>
+              </Box>
+
+              <Typography variant="body2" color="text.secondary">
+                Once connected, you can browse through available tables, view
+                their schemas (column names and data types), and preview sample
+                rows.
+              </Typography>
+
+              <Box
+                sx={{
+                  mt: 2,
+                  p: 1.5,
+                  bgcolor: isDark
+                    ? "rgba(52, 102, 246, 0.05)"
+                    : "rgba(52, 102, 246, 0.02)",
+                  borderRadius: 1,
+                  border: `1px solid ${
+                    isDark
+                      ? "rgba(52, 102, 246, 0.2)"
+                      : "rgba(52, 102, 246, 0.1)"
+                  }`,
+                }}
+              >
+                <Typography
+                  variant="caption"
+                  sx={{ fontWeight: 600, display: "block", mb: 1 }}
+                >
+                  Available tables
+                </Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6}>
+                    <Card
+                      elevation={0}
+                      sx={{
+                        p: 2,
+                        borderRadius: 1,
+                        border: `1px solid ${
+                          isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)"
+                        }`,
+                        bgcolor: isDark
+                          ? "rgba(52, 102, 246, 0.05)"
+                          : "rgba(52, 102, 246, 0.02)",
+                      }}
+                    >
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          fontFamily: "'Geist Mono', monospace",
+                          fontSize: "0.75rem",
+                          color: isDark
+                            ? "rgba(255,255,255,0.7)"
+                            : "rgba(0,0,0,0.7)",
+                        }}
+                      >
+                        customers
+                      </Typography>
+                    </Card>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Card
+                      elevation={0}
+                      sx={{
+                        p: 2,
+                        borderRadius: 1,
+                        border: `1px solid ${
+                          isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)"
+                        }`,
+                        bgcolor: isDark
+                          ? "rgba(52, 102, 246, 0.05)"
+                          : "rgba(52, 102, 246, 0.02)",
+                      }}
+                    >
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          fontFamily: "'Geist Mono', monospace",
+                          fontSize: "0.75rem",
+                          color: isDark
+                            ? "rgba(255,255,255,0.7)"
+                            : "rgba(0,0,0,0.7)",
+                        }}
+                      >
+                        orders
+                      </Typography>
+                    </Card>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Card
+                      elevation={0}
+                      sx={{
+                        p: 2,
+                        borderRadius: 1,
+                        border: `1px solid ${
+                          isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)"
+                        }`,
+                        bgcolor: isDark
+                          ? "rgba(52, 102, 246, 0.05)"
+                          : "rgba(52, 102, 246, 0.02)",
+                      }}
+                    >
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          fontFamily: "'Geist Mono', monospace",
+                          fontSize: "0.75rem",
+                          color: isDark
+                            ? "rgba(255,255,255,0.7)"
+                            : "rgba(0,0,0,0.7)",
+                        }}
+                      >
+                        products
+                      </Typography>
+                    </Card>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Card
+                      elevation={0}
+                      sx={{
+                        p: 2,
+                        borderRadius: 1,
+                        border: `1px solid ${
+                          isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)"
+                        }`,
+                        bgcolor: isDark
+                          ? "rgba(52, 102, 246, 0.05)"
+                          : "rgba(52, 102, 246, 0.02)",
+                      }}
+                    >
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          fontFamily: "'Geist Mono', monospace",
+                          fontSize: "0.75rem",
+                          color: isDark
+                            ? "rgba(255,255,255,0.7)"
+                            : "rgba(0,0,0,0.7)",
+                        }}
+                      >
+                        employees
+                      </Typography>
+                    </Card>
+                  </Grid>
+                </Grid>
+              </Box>
+
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
+                This helps you understand the structure of your data before
+                asking questions.
+              </Typography>
+            </Card>
+
+            {/* Third card - normal */}
+            <Card
+              elevation={0}
+              sx={{
+                p: 3,
+                borderRadius: 1,
+                gridColumn: { xs: "span 1", md: "span 2" },
+                gridRow: { xs: "span 1", md: "span 1" },
+                height: "100%",
+                transition: "all 0.3s ease",
+                border: `1px solid ${
+                  isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)"
+                }`,
+                bgcolor: isDark
+                  ? "rgba(52, 102, 246, 0.05)"
+                  : "rgba(52, 102, 246, 0.02)",
+                "&:hover": {
+                  transform: "translateY(-3px)",
+                  boxShadow: isDark
+                    ? "0 10px 20px rgba(0,0,0,0.2)"
+                    : "0 10px 20px rgba(0,0,0,0.1)",
+                },
+              }}
+            >
+              <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
+                <Box sx={{ color: theme.palette.primary.main }}>
+                  <PsychologyOutlinedIcon />
+                </Box>
+                <Typography variant="h6" fontWeight={600}>
+                  Voice-to-Text Querying
+                </Typography>
+              </Box>
+
+              <Typography variant="body2" color="text.secondary">
+                Use voice-to-text functionality to ask questions naturally.
+                Simply speak into the microphone, and the system will convert
+                your voice into text, process the query, and provide answers
+                instantly.
+              </Typography>
+
+              <Box
+                sx={{
+                  mt: "auto",
+                  pt: 2,
+                  display: "flex",
+                  justifyContent: "center",
+                }}
+              >
+                <video
+                  src="/mic.webm"
+                  autoPlay
+                  loop
+                  muted
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    borderRadius: "50%",
+                  }}
+                />
+              </Box>
+            </Card>
+
+            {/* Fourth card - normal */}
             <Card
               elevation={0}
               sx={{
@@ -287,163 +639,243 @@ QueryBot enables users to query an Azure SQL database using natural language - e
                 borderRadius: 1,
                 gridColumn: { xs: "span 1", md: "span 3" },
                 height: "100%",
-                border: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)"}`,
-                transition: "0.3s",
+                transition: "all 0.3s ease",
+                border: `1px solid ${
+                  isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)"
+                }`,
+                bgcolor: isDark
+                  ? "rgba(99, 102, 241, 0.05)"
+                  : "rgba(99, 102, 241, 0.02)",
                 "&:hover": {
                   transform: "translateY(-3px)",
                   boxShadow: isDark
                     ? "0 10px 20px rgba(0,0,0,0.2)"
                     : "0 10px 20px rgba(0,0,0,0.1)",
                 },
-                display: "flex",
-                flexDirection: "column",
               }}
             >
-              <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
-                <Box sx={{ color: theme.palette.primary.main }}>
-                  <KeyboardVoiceOutlinedIcon />
+              <Box sx={{ display: "flex", gap: 2 }}>
+                <Box sx={{ color: "#6366F1" }}>
+                  <AutoAwesomeIcon />
                 </Box>
                 <Typography variant="h6" fontWeight={600}>
-                  Ask a Question
+                  View Results
                 </Typography>
               </Box>
-              <Typography variant="body2" color="text.secondary">
-                Start by typing or speaking a question about the data, such as{" "}
-                <strong>"Show me monthly sales for 2024"</strong>. You don't need to write SQL - 
-                just use natural language!
-              </Typography>
-              <Box sx={{ mt: "auto", pt: 2 }}>
-                <img
-                  src="/ask-preview.png"
-                  alt="Ask question preview"
-                  style={{ width: "100%", borderRadius: "4px",  objectFit:"cover", opacity: 0.85 }}
-                />
-              </Box>
-            </Card>
+              <Grid container spacing={3} alignItems="stretch">
+                <Grid item xs={12} md={5}>
+                  <Box
+                    sx={{
+                      height: "100%",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "center",
+                      mb: 3,
+                    }}
+                  >
+                    <Typography variant="body2" color="text.secondary">
+                      The system automatically converts your natural language
+                      input into SQL and executes it against your database.
+                    </Typography>
 
-            {/* Step 2: Get Instant Results */}
-            <Card
-              elevation={0}
-              sx={{
-                p: 3,
-                borderRadius: 1,
-                gridColumn: { xs: "span 1", md: "span 2" },
-                border: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)"}`,
-                transition: "0.3s",
-                "&:hover": {
-                  transform: "translateY(-3px)",
-                  boxShadow: isDark
-                    ? "0 10px 20px rgba(0,0,0,0.2)"
-                    : "0 10px 20px rgba(0,0,0,0.1)",
-                },
-                display: "flex",
-                flexDirection: "column",
-              }}
-            >
-              <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
-                <Box sx={{ color: theme.palette.primary.main }}>
-                  <BarChartOutlinedIcon />
-                </Box>
-                <Typography variant="h6" fontWeight={600}>
-                  See Results Instantly
-                </Typography>
-              </Box>
-              <Typography variant="body2" color="text.secondary">
-                The app uses AI to convert your question into SQL, runs it on the dataset, and returns the output with smart charts, tables, and summaries.
-              </Typography>
-              <Box sx={{ mt: "auto", pt: 2 }}>
-                <img
-                  src="/results-preview.png"
-                  alt="Results preview"
-                  style={{ width: "100%", height: "200px", borderRadius: "4px", opacity: 0.9}}
-                />
-              </Box>
-            </Card>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ mt: 2 }}
+                    >
+                      Results are displayed in a clear, tabular format that you
+                      can analyze, filter, and export for further use.
+                    </Typography>
+                  </Box>
+                </Grid>
 
-            {/* Step 3: Download & Explore */}
-            <Card
-              elevation={0}
-              sx={{
-                p: 3,
-                borderRadius: 1,
-                gridColumn: { xs: "span 1", md: "span 3" },
-                border: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)"}`,
-                transition: "0.3s",
-                "&:hover": {
-                  transform: "translateY(-3px)",
-                  boxShadow: isDark
-                    ? "0 10px 20px rgba(0,0,0,0.2)"
-                    : "0 10px 20px rgba(0,0,0,0.1)",
-                },
-                display: "flex",
-                flexDirection: "column",
-              }}
-            >
-              <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
-                <Box sx={{ color: theme.palette.primary.main }}>
-                  <DownloadIcon />
-                </Box>
-                <Typography variant="h6" fontWeight="bold" gutterBottom>
-                  <ArrowDownwardIcon sx={{ verticalAlign: "middle", mr: 1 }} />
-                  Download or Refine
-                </Typography>
-              </Box>
-              <Typography variant="body2" color="text.secondary" mb={2}>
-                Review the SQL generated, fix errors (if any), download the results,
-                or follow up with a refined query - all in a simple chat flow.
-              </Typography>
-              <Box sx={{ mt: "auto", pt: 2 }}>
-                <img
-                  src="/download-preview.png"
-                  alt="Download or refine preview"
-                  style={{ width: "100%", borderRadius: "4px", maxHeight: "200px", opacity: 0.95, objectFit:"contain" }}
-                />
-              </Box>
-            </Card>
+                <Grid item xs={12} md={7}>
+                  <Box
+                    sx={{
+                      height: "100%",
+                      p: 2,
+                      bgcolor: isDark ? "rgba(0,0,0,0.2)" : "rgba(0,0,0,0.03)",
+                      borderRadius: 1,
+                      border: `1px solid ${
+                        isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)"
+                      }`,
+                      display: "flex",
+                      flexDirection: "column",
+                    }}
+                  >
+                    <Typography
+                      variant="caption"
+                      sx={{ color: "#10B981", display: "block", mb: 1 }}
+                    >
+                      Generated SQL:
+                    </Typography>
 
-            {/* Step 4: Understand Output */}
-            <Card
-              elevation={0}
-              sx={{
-                p: 3,
-                borderRadius: 1,
-                gridColumn: { xs: "span 1", md: "span 2" },
-                border: `1px solid ${isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)"}`,
-                transition: "0.3s",
-                "&:hover": {
-                  transform: "translateY(-3px)",
-                  boxShadow: isDark
-                    ? "0 10px 20px rgba(0,0,0,0.2)"
-                    : "0 10px 20px rgba(0,0,0,0.1)",
-                },
-                display: "flex",
-                flexDirection: "column",
-              }}
-            >
-              <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
-                <Box sx={{ color: theme.palette.primary.main }}>
-                  <BarChartIcon />
-                </Box>
-                <Typography variant="h6" fontWeight="bold" gutterBottom>
-                  Understand the Output
-                </Typography>
-              </Box>
+                    <Box
+                      sx={{
+                        fontFamily: "'Geist Mono', monospace",
+                        fontSize: "0.75rem",
+                        color: isDark
+                          ? "rgba(255,255,255,0.85)"
+                          : "rgba(0,0,0,0.85)",
+                        p: 1.5,
+                        borderRadius: 1,
+                        bgcolor: isDark
+                          ? "rgba(0,0,0,0.3)"
+                          : "rgba(0,0,0,0.02)",
+                        border: `1px solid ${
+                          isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"
+                        }`,
+                        flexGrow: 1,
+                        display: "flex",
+                        flexDirection: "column",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Typography
+                        variant="body2"
+                        component="pre"
+                        sx={{
+                          fontFamily: "'Geist Mono', monospace",
+                          fontSize: "0.75rem",
+                          lineHeight: 1.5,
+                          m: 0,
+                          whiteSpace: "pre-wrap",
+                        }}
+                      >
+                        SELECT * FROM employees WHERE hire_date > '2020-01-01'
+                        ORDER BY hire_date DESC
+                      </Typography>
+                    </Box>
 
-              <Box
-                sx={{
-                  flexGrow: 1,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  textAlign: "center",
-                }}
-              >
-                <Typography variant="body2" color="text.secondary">
-                  Review smart visualizations and summaries generated from your query - including bar charts, line graphs, tables, and plain-language insights. Instantly identify key patterns, track performance metrics, and uncover trends that help you make informed, data-driven decisions with confidence.
-                </Typography>
-              </Box>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "flex-end",
+                        mt: 1.5,
+                      }}
+                    ></Box>
+                  </Box>
+                </Grid>
+              </Grid>
             </Card>
           </Box>
+        </Section>
+
+        
+        <Section
+          title="Visualize Data"
+          icon={<BoltOutlinedIcon fontSize="medium" color="primary" />}
+        >
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6}>
+              <Card
+                elevation={0}
+                sx={{
+                  p: 2,
+                  borderRadius: 1,
+                  border: `1px solid ${
+                    isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)"
+                  }`,
+                  bgcolor: isDark
+                    ? "rgba(52, 102, 246, 0.05)"
+                    : "rgba(52, 102, 246, 0.02)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1.5,
+                }}
+              >
+                <BarChartIcon fontSize="small" color="primary" />
+                <Typography
+                  variant="body2"
+                  fontWeight={600}
+                  color="text.primary"
+                >
+                  Bar Chart
+                </Typography>
+              </Card>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Card
+                elevation={0}
+                sx={{
+                  p: 2,
+                  borderRadius: 1,
+                  border: `1px solid ${
+                    isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)"
+                  }`,
+                  bgcolor: isDark
+                    ? "rgba(52, 102, 246, 0.05)"
+                    : "rgba(52, 102, 246, 0.02)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1.5,
+                }}
+              >
+                <ShowChart fontSize="small" color="primary" />
+                <Typography
+                  variant="body2"
+                  fontWeight={600}
+                  color="text.primary"
+                >
+                  Line Chart
+                </Typography>
+              </Card>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Card
+                elevation={0}
+                sx={{
+                  p: 2,
+                  borderRadius: 1,
+                  border: `1px solid ${
+                    isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)"
+                  }`,
+                  bgcolor: isDark
+                    ? "rgba(52, 102, 246, 0.05)"
+                    : "rgba(52, 102, 246, 0.02)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1.5,
+                }}
+              >
+                <PieChart fontSize="small" color="primary" />
+                <Typography
+                  variant="body2"
+                  fontWeight={600}
+                  color="text.primary"
+                >
+                  Pie Chart
+                </Typography>
+              </Card>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <Card
+                elevation={0}
+                sx={{
+                  p: 2,
+                  borderRadius: 1,
+                  border: `1px solid ${
+                    isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)"
+                  }`,
+                  bgcolor: isDark
+                    ? "rgba(52, 102, 246, 0.05)"
+                    : "rgba(52, 102, 246, 0.02)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1.5,
+                }}
+              >
+                <FileDownload fontSize="small" color="primary" />
+                <Typography
+                  variant="body2"
+                  fontWeight={600}
+                  color="text.primary"
+                >
+                  Download CSV
+                </Typography>
+              </Card>
+            </Grid>
+          </Grid>
         </Section>
 
         <Section title="How It Works" icon={<HelpOutlineIcon fontSize="medium" />}>
@@ -468,7 +900,6 @@ QueryBot enables users to query an Azure SQL database using natural language - e
   </Card>
 </Section>
 
-        {/* Fifth card - wide */}
         <Section title="Sample Queries" icon={<CodeIcon fontSize="medium" />}>
           <Card
             elevation={0}
@@ -595,8 +1026,8 @@ QueryBot enables users to query an Azure SQL database using natural language - e
           </Card>
         </Section>
 
-        {/* Reflections */}
-        <Section title="Reflections" icon={<LightbulbOutlinedIcon fontSize="medium" />}>
+                {/* Reflections */}
+                <Section title="Reflections" icon={<LightbulbOutlinedIcon fontSize="medium" />}>
           <Card
             elevation={0}
             sx={{
@@ -657,7 +1088,6 @@ QueryBot enables users to query an Azure SQL database using natural language - e
           </Card>
         </Section>
 
-        {/* Call to action to try chat */}
         <Box sx={{ textAlign: "center", mt: 8, mb: 4 }}>
           <Button
             variant="contained"
@@ -679,6 +1109,7 @@ QueryBot enables users to query an Azure SQL database using natural language - e
             Try QueryBot Now!
           </Button>
         </Box>
+
       </Container>
     </Box>
   );
