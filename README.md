@@ -1,125 +1,148 @@
-# QueryBot
+# QueryBot: Conversational Data Exploration Platform
 
-A modern, production-ready GenAI SQL chatbot platform that enables users to query structured databases using natural language. QueryBot removes the technical barrier of writing SQL and allows anyone to interact with data conversationally and securely.
+**QueryBot** is a modern **Generative AI SQL chatbot** that empowers **non-technical users** to query structured databases using natural language — via **text or voice input**. Built for simplicity, it removes the need to write SQL, making data accessible to everyone.
 
 ---
 
-## ✨ Key Features of the Voice-Enabled Data Interpreter Assistant
+## Assumptions
 
-### 📂 1. Dashboard Explorer: Select a Data Domain
-Let users choose the type of data they want to explore, so the assistant understands the context and tailors responses accurately.
-**What it does:**
-- Presents predefined domains like:
-    - 📊 Sales Performance
-    - 🎟️ Customer Support Tickets
-    - 👥 Employee Productivity
-- Automatically loads:
-    - Schema (table/field names)
-    - KPI definitions
-    - Domain-specific prompt templates
+- Designed for **non-technical** business users (e.g., managers, analysts)
+- Uses a **pre-loaded** database securely connected via **Azure SQL**
+- Only **read operations** are allowed — no data mutation
+- Users can ask queries using **text input** or **microphone**
+- Schema, KPIs, and domain prompts are **pre-configured**
 
-### 🧠 2. Domain-Aware Query Handling (Smart Prompting + SQL Generation)
-Allow natural language queries like:
-"How did North region perform in March?"
-"Compare this quarter with the previous one."
-**What it does:**
-- Translates user query into SQL using GPT
-- Handles fuzzy, human-like questions
-- Injects schema and KPI context into GPT prompts
+---
 
-### 🧾 3. Natural Language Summary of Raw Data
-Go beyond SQL rows — explain results in plain English for business users.
-**What it does:**
-- Converts query results into a concise explanation
-- Adds comparison logic (e.g., vs target, vs last period)
-**Example output:**
-"In March, North region achieved $500K in sales, falling short by $100K from the target of $600K."
+## Key Features
 
-### 🗣️ 4. Voice Output (Text-to-Speech)
-Let the assistant speak the final answer aloud.
-**What it does:**
-- Converts text summary into spoken response
-- Enhances accessibility and user experience
-- Provides a "🔊 Speak Answer" button that plays the spoken version of the response.
-- Optionally, auto-reads the answer after summarization or successful query execution.
+### 1. Dashboard Explorer: Select a Data Domain
+
+- Lets users pick a data domain to query
+- Loads schema, KPIs, and domain-specific prompt context
+
+**Examples:**
+- Sales Performance
+- Customer Support Tickets
+- Employee Productivity
+
+---
+
+### 2. Smart NL-to-SQL with Domain Awareness
+
+- Translates fuzzy natural language like:
+  - “Compare sales this quarter vs last.”
+  - “What’s the average salary in Marketing?”
+- Injects schema/KPI context into GPT prompts for accuracy
+
+---
+
+### 3. Natural Language Summary of Results
+
+- Converts SQL output into business-friendly summaries
+- Adds interpretation (e.g., vs targets or previous periods)
+
+**Example:**
+> “In March, North region achieved $500K in sales, falling short by $100K from the target of $600K.”
+
+---
+
+### 4. Dual Input: Text and Voice
+
+- Users can **type** or **speak** their query using a mic
+- Voice input is transcribed using Azure Speech-to-Text
+- Ideal for accessibility and hands-free scenarios
 
 ---
 
 ## Tech Stack
 
 | Layer      | Technology/Library         | Purpose                                 |
-|------------|---------------------------|-----------------------------------------|
-| Frontend   | React                     | UI framework                            |
-|            | Material UI (MUI)         | UI components, theming, icons           |
-|            | React Router              | Routing/navigation                      |
-|            | Chart.js, Recharts        | Data visualizations                     |
-|            | Custom CSS                | Additional styling                      |
-| Backend    | FastAPI                   | REST API framework                      |
-|            | SQLAlchemy                | Database connection/ORM                 |
-|            | Pandas                    | Data manipulation                       |
-|            | Azure OpenAI (GPT-4)      | NL-to-SQL translation, Summarization, Prompting |
-|            | Azure SQL Database        | Data storage                            |
-|            | Azure Speech Service      | Text-to-Speech capabilities             |
-|            | Uvicorn                   | ASGI server                             |
-| DevOps     | Docker                    | Containerization                        |
-|            | dotenv                    | Env variable management                 |
-|            | CORS Middleware           | Secure API access                       |
+|------------|----------------------------|------------------------------------------|
+| Frontend   | React                      | UI framework                             |
+|            | Material UI (MUI)          | Components, theming, icons               |
+|            | React Router               | Routing/navigation                       |
+|            | Chart.js, Recharts         | Visualizations                           |
+| Backend    | FastAPI                    | REST API framework                       |
+|            | SQLAlchemy                 | ORM + Azure SQL integration              |
+|            | Pandas                     | Data transformation                      |
+|            | Azure OpenAI (GPT-4)       | SQL generation + summarization           |
+|            | Azure Speech-to-Text       | Voice input transcription                |
+| DevOps     | Docker, dotenv             | Containerization, config management      |
+| Security   | CORS, Azure Identity       | API access + environment security        |
 
 ---
 
-## Setup
+## Setup Instructions
 
 ### Prerequisites
+
 - Python 3.8+
 - Node.js 14+
 - Azure SQL Database
-- Azure OpenAI Service
-- Azure Speech Service
+- Azure OpenAI API key
+- Azure Speech-to-Text key
 
-### Backend
-1. Create a `.env` file with your Azure SQL, OpenAI, and Speech Service credentials. Example:
-   ```
+---
+
+### Backend Setup
+
+1. Create a `.env` file in `backend/`:
+   ```env
    DATABASE_URL="mssql+pyodbc://user:password@server.database.windows.net/database?driver=ODBC+Driver+18+for+SQL+Server"
-   AZURE_OPENAI_API_KEY="your_azure_openai_api_key"
-   AZURE_OPENAI_ENDPOINT="https://your-openai-resource.openai.azure.com/"
-   AZURE_SPEECH_KEY="your_azure_speech_key"
-   AZURE_SPEECH_REGION="your_azure_speech_region"
-   ```
-2. Install Python dependencies:
-   ```bash
-   pip install -r backend/requirements.txt
-   ```
-3. Start the backend:
-   ```bash
-   uvicorn backend.main:app --reload
-   ```
+   AZURE_OPENAI_API_KEY="your_openai_key"
+   AZURE_OPENAI_ENDPOINT="https://your-resource.openai.azure.com/"
+   AZURE_SPEECH_KEY="your_speech_key"
+   AZURE_SPEECH_REGION="your_region"
 
-### Frontend
-1. Navigate to the frontend directory:
-   ```bash
-   cd frontend
-   ```
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Start the frontend:
-   ```bash
-   npm start
-   ```
 
----
 
-## Usage
+### Frontend Setup
 
-1. Go to `http://localhost:3000`
-2. Select a data domain using the **Dashboard Explorer**.
-3. Go to **Chat** and ask questions in natural language.
-4. View results in a table and as visualizations, along with a **Natural Language Summary**.
-5. Click the **🔊 Speak Answer** button next to assistant responses to hear them read aloud.
-6. Export results as CSV, Excel, or JSON.
+1.  Navigate to frontend folder:
+  
+    `cd frontend` 
+    
+2.  Install dependencies:
+    
+    `npm install` 
+    
+3.  Start the frontend:
+    
+    `npm start` 
+    
 
----
+----------
+
+## How to Use
+
+1.  Open your browser and go to:  
+    [http://localhost:3000](http://localhost:3000)
+    
+2.  Select a data domain from the **Dashboard Explorer**
+    
+3.  Go to the **Chat** tab
+    
+4.  Type your question **or click 🎙️ to speak** it
+    
+5.  View:
+    
+    -   The generated SQL query
+        
+    -   Tabular results
+        
+    -   Natural language summary
+        
+6.  Download results as:
+    
+    -   CSV
+        
+    -   Excel
+        
+    -   JSON
+        
+
+----------
 
 ## Sample Queries
 
@@ -130,46 +153,52 @@ Let the assistant speak the final answer aloud.
 | Average salary by department            | `SELECT department, AVG(salary) FROM employees GROUP BY department;`                              |
 | Show total revenue per year             | `SELECT YEAR(order_date), SUM(revenue) FROM sales GROUP BY YEAR(order_date);`                     |
 
----
+----------
 
 ## Prompting Tips
 
-- **Be specific:** Include table or column names when possible.
-- **Use filters:** e.g., "Employees with salary over 70000 in Marketing."
-- **Avoid vague phrasing:** General inputs like "Show me something interesting" may not yield usable results.
+-   Be specific: Use filters and known fields
+    
+-   Use keywords like “compare”, “trend”, “highest”
+    
+-   Avoid vague queries like “Show me insights”
+    
 
----
+----------
 
-## Limitations
+## Known Limitations
 
-- May struggle with vague or highly contextual queries.
-- Only read operations are permitted (no updates/deletes).
-- SQL errors are caught and shown gracefully, but complex queries may require refinement.
-- Sensitive data masking is not yet implemented.
+-   Only supports **read** operations — no writes/updates
+    
+-   May struggle with **vague** or **ambiguous** input
+    
+-   Sensitive data masking is not implemented
+    
+-   Schema changes require backend reload
+    
 
----
+----------
 
 ## Reflections
 
-See [REFLECTIONS.txt](./REFLECTIONS.txt) for a detailed write-up.
+See [`REFLECTIONS.txt`](./REFLECTIONS.txt) for detailed insights.
 
-**Summary:**
-- GenAI (GPT-4) can accurately translate natural language to SQL, especially when grounded with schema and context.
-- Prompt engineering and schema-awareness are essential for reliable results.
-- Robust error handling and a clean UI are key for user trust and adoption.
+> GPT-4 performs reliably when grounded with schema + KPI context. Voice input makes the tool more inclusive, while summaries make it understandable for business users.
 
----
+----------
 
 ## License
 
 MIT License
 
----
+----------
 
 ## Acknowledgments
 
-- Azure OpenAI Service
-- Azure SQL Database
-- Azure Speech Service
-- Python Data Science Stack (pandas, numpy)
-- Material UI & React Community 
+-   [Azure OpenAI Service](https://azure.microsoft.com/en-us/products/ai-services/openai/)
+    
+-   [Azure SQL Database](https://azure.microsoft.com/en-us/products/azure-sql/)
+    
+-   [Azure Speech Services](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/)
+    
+-   React & Material UI community
