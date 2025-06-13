@@ -1,8 +1,11 @@
-# QueryBot: Conversational Data Exploration Platform
-
+<h1><span><img height=30px src="https://github.com/user-attachments/assets/98c0aaba-897e-4d17-a032-90b94420c016"> QueryBot: Conversational Data Exploration Platform</h1>
+  
 **QueryBot** is a modern **Generative AI SQL chatbot** that empowers **non-technical users** to query structured databases using natural language — via **text or voice input**. Built for simplicity, it removes the need to write SQL, making data accessible to everyone.
 
----
+
+https://github.com/user-attachments/assets/576076f4-af7d-43a0-8628-fd0af6a4c04f
+
+
 
 ## Assumptions
 
