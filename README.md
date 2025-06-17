@@ -1,11 +1,8 @@
-<h1><span><img height=30px src="https://github.com/user-attachments/assets/98c0aaba-897e-4d17-a032-90b94420c016"> QueryBot: Conversational Data Exploration Platform</h1>
+<h1 align="center"><span><img height=30px src="https://github.com/user-attachments/assets/98c0aaba-897e-4d17-a032-90b94420c016"> QueryBot </h1>
   
 **QueryBot** is a modern **Generative AI SQL chatbot** that empowers **non-technical users** to query structured databases using natural language — via **text or voice input**. Built for simplicity, it removes the need to write SQL, making data accessible to everyone.
 
-
 https://github.com/user-attachments/assets/576076f4-af7d-43a0-8628-fd0af6a4c04f
-
-
 
 ## Assumptions
 
@@ -14,8 +11,6 @@ https://github.com/user-attachments/assets/576076f4-af7d-43a0-8628-fd0af6a4c04f
 - Only **read operations** are allowed — no data mutation
 - Users can ask queries using **text input** or **microphone**
 - Schema, KPIs, and domain prompts are **pre-configured**
-
----
 
 ## Key Features
 
@@ -29,16 +24,12 @@ https://github.com/user-attachments/assets/576076f4-af7d-43a0-8628-fd0af6a4c04f
 - Customer Support Tickets
 - Employee Productivity
 
----
-
 ### 2. Smart NL-to-SQL with Domain Awareness
 
 - Translates fuzzy natural language like:
   - “Compare sales this quarter vs last.”
   - “What’s the average salary in Marketing?”
 - Injects schema/KPI context into GPT prompts for accuracy
-
----
 
 ### 3. Natural Language Summary of Results
 
@@ -48,15 +39,11 @@ https://github.com/user-attachments/assets/576076f4-af7d-43a0-8628-fd0af6a4c04f
 **Example:**
 > “In March, North region achieved $500K in sales, falling short by $100K from the target of $600K.”
 
----
-
 ### 4. Dual Input: Text and Voice
 
 - Users can **type** or **speak** their query using a mic
 - Voice input is transcribed using Azure Speech-to-Text
 - Ideal for accessibility and hands-free scenarios
-
----
 
 ## Tech Stack
 
@@ -74,78 +61,56 @@ https://github.com/user-attachments/assets/576076f4-af7d-43a0-8628-fd0af6a4c04f
 | DevOps     | Docker, dotenv             | Containerization, config management      |
 | Security   | CORS, Azure Identity       | API access + environment security        |
 
----
-
 ## Setup Instructions
 
-### Prerequisites
-
-- Python 3.8+
-- Node.js 14+
-- Azure SQL Database
-- Azure OpenAI API key
-- Azure Speech-to-Text key
-
----
-
-### Backend Setup
-
-1. Create a `.env` file in `backend/`:
-   ```env
+### Backend
+1. Create a `.env` file with your Azure SQL, OpenAI, and Speech Service credentials. Example:
+   ```
    DATABASE_URL="mssql+pyodbc://user:password@server.database.windows.net/database?driver=ODBC+Driver+18+for+SQL+Server"
-   AZURE_OPENAI_API_KEY="your_openai_key"
-   AZURE_OPENAI_ENDPOINT="https://your-resource.openai.azure.com/"
-   AZURE_SPEECH_KEY="your_speech_key"
-   AZURE_SPEECH_REGION="your_region"
+   AZURE_OPENAI_API_KEY="your_azure_openai_api_key"
+   AZURE_OPENAI_ENDPOINT="https://your-openai-resource.openai.azure.com/"
+   AZURE_SPEECH_KEY="your_azure_speech_key"
+   AZURE_SPEECH_REGION="your_azure_speech_region"
+   ```
+2. Install Python dependencies:
+   ```bash
+   pip install -r backend/requirements.txt
+   ```
+3. Start the backend:
+   ```bash
+   uvicorn backend.main:app --reload
+   ```
 
-
-
-### Frontend Setup
-
-1.  Navigate to frontend folder:
-  
-    `cd frontend` 
-    
-2.  Install dependencies:
-    
-    `npm install` 
-    
-3.  Start the frontend:
-    
-    `npm start` 
-    
-
-----------
+### Frontend
+1. Navigate to the frontend directory:
+   ```bash
+   cd frontend
+   ```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Start the frontend:
+   ```bash
+   npm start
+   ```
 
 ## How to Use
 
-1.  Open your browser and go to:  
-    [http://localhost:3000](http://localhost:3000)
+1.  Open your browser and go to:  [http://localhost:3000](http://localhost:3000)
     
-2.  Select a data domain from the **Dashboard Explorer**
+2.  Select a data domain from the `Dashboard Explorer`
     
-3.  Go to the **Chat** tab
+3.  Go to the `Chat` tab
     
-4.  Type your question **or click 🎙️ to speak** it
+4.  Type your question or click 🎙️ to speak it
     
 5.  View:
-    
     -   The generated SQL query
-        
     -   Tabular results
-        
     -   Natural language summary
         
-6.  Download results as:
-    
-    -   CSV
-        
-    -   Excel
-        
-    -   JSON
-        
-
-----------
+6.  Download results as `xlsx`
 
 ## Sample Queries
 
@@ -156,7 +121,6 @@ https://github.com/user-attachments/assets/576076f4-af7d-43a0-8628-fd0af6a4c04f
 | Average salary by department            | `SELECT department, AVG(salary) FROM employees GROUP BY department;`                              |
 | Show total revenue per year             | `SELECT YEAR(order_date), SUM(revenue) FROM sales GROUP BY YEAR(order_date);`                     |
 
-----------
 
 ## Prompting Tips
 
@@ -167,8 +131,6 @@ https://github.com/user-attachments/assets/576076f4-af7d-43a0-8628-fd0af6a4c04f
 -   Avoid vague queries like “Show me insights”
     
 
-----------
-
 ## Known Limitations
 
 -   Only supports **read** operations — no writes/updates
@@ -178,30 +140,16 @@ https://github.com/user-attachments/assets/576076f4-af7d-43a0-8628-fd0af6a4c04f
 -   Sensitive data masking is not implemented
     
 -   Schema changes require backend reload
-    
-
-----------
 
 ## Reflections
 
 See [`REFLECTIONS.txt`](./REFLECTIONS.txt) for detailed insights.
 
-> GPT-4 performs reliably when grounded with schema + KPI context. Voice input makes the tool more inclusive, while summaries make it understandable for business users.
-
-----------
-
-## License
-
-MIT License
-
-----------
-
 ## Acknowledgments
 
+> GPT-4 performs reliably when grounded with schema + KPI context. Voice input makes the tool more inclusive, while summaries make it understandable for business users.
+
 -   [Azure OpenAI Service](https://azure.microsoft.com/en-us/products/ai-services/openai/)
-    
 -   [Azure SQL Database](https://azure.microsoft.com/en-us/products/azure-sql/)
-    
 -   [Azure Speech Services](https://learn.microsoft.com/en-us/azure/ai-services/speech-service/)
-    
 -   React & Material UI community
