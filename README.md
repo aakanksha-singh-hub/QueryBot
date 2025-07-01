@@ -2,7 +2,10 @@
   
 **QueryBot** is a modern **Generative AI SQL chatbot** that empowers **non-technical users** to query structured databases using natural language — via **text or voice input**. Built for simplicity, it removes the need to write SQL, making data accessible to everyone.
 
-https://github.com/user-attachments/assets/576076f4-af7d-43a0-8628-fd0af6a4c04f
+## 📽️ Demo Video
+
+[![Watch the demo](https://img.youtube.com/vi/zXYcH47k2g8/0.jpg)](https://youtu.be/zXYcH47k2g8)
+
 
 ## Assumptions
 
